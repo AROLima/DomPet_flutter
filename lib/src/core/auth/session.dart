@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -21,6 +22,42 @@ class Session {
       token: json['token'] as String,
       expiresAt: DateTime.parse(json['expiresAt'] as String),
     );
+  }
+
+  /// Extracts roles from JWT payload if present. Supports common claims:
+  /// roles, authorities, scope/scopes, realm_access.roles
+  List<String> get roles {
+    try {
+      final parts = token.split('.');
+      if (parts.length < 2) return const [];
+      String normalized = parts[1].replaceAll('-', '+').replaceAll('_', '/');
+      // pad base64
+      while (normalized.length % 4 != 0) {
+        normalized += '=';
+      }
+      final payload = json.decode(utf8.decode(base64.decode(normalized))) as Map<String, dynamic>;
+      final set = <String>{};
+      void addAll(dynamic v) {
+        if (v is String) {
+          for (final s in v.split(RegExp(r'[ ,]'))) {
+            if (s.isNotEmpty) set.add(s.trim());
+          }
+        } else if (v is List) {
+          for (final e in v) {
+            if (e is String) set.add(e);
+          }
+        }
+      }
+      if (payload['roles'] != null) addAll(payload['roles']);
+      if (payload['authorities'] != null) addAll(payload['authorities']);
+      if (payload['scope'] != null) addAll(payload['scope']);
+      if (payload['scopes'] != null) addAll(payload['scopes']);
+      final realm = payload['realm_access'];
+      if (realm is Map && realm['roles'] != null) addAll(realm['roles']);
+      return set.toList(growable: false);
+    } catch (_) {
+      return const [];
+    }
   }
 }
 

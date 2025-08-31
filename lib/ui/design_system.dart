@@ -27,10 +27,10 @@ class AppTokens {
 }
 
 class AppBreakpoints {
-  static const xs = 600.0;
-  static const sm = 900.0;
-  static const md = 1200.0;
-  static const lg = 1536.0;
+  static const xs = 600.0;   // <600
+  static const sm = 900.0;   // 600–900
+  static const md = 1200.0;  // 900–1200
+  static const lg = 1536.0;  // 1200–1536
   static const xl = 1536.0; // xl >= 1536
 }
 
@@ -62,6 +62,22 @@ int gridCrossAxisCountFor(double width) {
   if (width < AppBreakpoints.md) return 4; // md
   if (width < AppBreakpoints.lg) return 5; // lg
   return 5; // xl
+}
+
+// New helpers (non-breaking additions)
+int gridColsFor(double width) {
+  if (width >= AppBreakpoints.lg) return 5;
+  if (width >= AppBreakpoints.md) return 4;
+  if (width >= AppBreakpoints.sm) return 3;
+  return 2;
+}
+
+double heroAspectFor(double width) {
+  if (width >= AppBreakpoints.xl) return 16 / 5;
+  if (width >= AppBreakpoints.lg) return 16 / 6;
+  if (width >= AppBreakpoints.md) return 16 / 7;
+  if (width >= AppBreakpoints.sm) return 16 / 9;
+  return 4 / 3;
 }
 
 // Theme helpers

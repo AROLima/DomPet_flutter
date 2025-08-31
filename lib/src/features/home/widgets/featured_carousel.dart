@@ -1,93 +1,201 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../cart/cart_service.dart';
+import '../../cart/local_cart.dart' show MergeConflict;
 import '../../products/products_service.dart';
 import '../../../shared/models/product.dart';
 import '../../../../ui/design_system.dart';
 
 class FeaturedCarousel extends ConsumerStatefulWidget {
-  const FeaturedCarousel({super.key});
+  const FeaturedCarousel({super.key, this.category});
+  final String? category;
 
   @override
   ConsumerState<FeaturedCarousel> createState() => _FeaturedCarouselState();
 }
 
 class _FeaturedCarouselState extends ConsumerState<FeaturedCarousel> {
-  final _controller = PageController(viewportFraction: 0.95);
+  final _controller = PageController(viewportFraction: 0.92, keepPage: true);
   int _index = 0;
+  Timer? _auto;
+  int _count = 0;
+  bool _paused = false;
+  Future<List<Produto>>? _future;
 
-  Future<List<Produto>> _load() async {
-    final service = ref.read(productsServiceProvider);
-    // Try destaque (fallback to first page of search)
-    try {
-      final res = await service.search(nome: null, categoria: null, page: 0, size: 8);
-      return res.content;
-    } catch (_) {
-      // Try suggestions empty query
-      try {
-        final sugs = await service.suggestions('');
-        // We only have id & nome; fallback price/stock omitted
-        return sugs.map((s) => Produto(id: s.id, nome: s.nome, preco: 0, estoque: 0, ativo: true)).toList();
-      } catch (_) {
-        // Last fallback: getAll
-        try {
-          final all = await service.getAll();
-          return all.take(8).toList();
-        } catch (_) {
-          return [];
-        }
-      }
+  @override
+  void dispose() {
+    _auto?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _restartAuto() {
+    _auto?.cancel();
+    if (_count <= 1) return;
+    _auto = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (!mounted || _paused || !_controller.hasClients || _count <= 1) return;
+      final next = (_index + 1) % _count;
+      _controller.animateToPage(next, duration: const Duration(milliseconds: 360), curve: Curves.easeOut);
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _future = _load();
+  }
+
+  @override
+  void didUpdateWidget(covariant FeaturedCarousel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.category != widget.category) {
+      _index = 0;
+      _future = _load();
+      _restartAuto();
+      setState(() {});
     }
   }
 
-  double _aspectFor(double width) {
-    if (width < AppBreakpoints.xs) return 4 / 3;
-    if (width < AppBreakpoints.sm) return 4 / 3;
-    if (width < AppBreakpoints.md) return 16 / 9;
-    return 16 / 6; // lg/xl
+  Future<List<Produto>> _load() async {
+    final service = ref.read(productsServiceProvider);
+    // 1) Tenta sugestões (rota /produtos/suggestions)
+    try {
+      final sugs = await service.suggestions('', limit: 8);
+      // Caso a API de sugestões não traga preços/imagens, caímos para search;
+      // porém usamos os IDs para evitar duplicados no fallback.
+      final ids = sugs.map((e) => e.id).toSet();
+      if (ids.isNotEmpty) {
+    final page = await service.search(page: 0, size: 12, categoria: widget.category);
+        final merged = <int, Produto>{};
+        for (final p in page.content) {
+          if (ids.contains(p.id)) merged[p.id] = p;
+        }
+        if (merged.isNotEmpty) return merged.values.toList();
+      }
+    } catch (_) {}
+
+    // 2) Fallback: primeira página do search
+    try {
+  final page = await service.search(page: 0, size: 8, categoria: widget.category);
+      if (page.content.isNotEmpty) {
+        // distinct by id
+        final seen = <int>{};
+        final distinct = <Produto>[];
+        for (final p in page.content) {
+          if (seen.add(p.id)) distinct.add(p);
+        }
+        return distinct;
+      }
+    } catch (_) {}
+
+    // 3) Último fallback: getAll (até 8 itens)
+    try {
+      final all = await service.getAll();
+      return all.take(8).toList();
+    } catch (_) {
+      return [];
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<List<Produto>>(
-      future: _load(),
+      future: _future,
       builder: (context, snap) {
         if (snap.connectionState != ConnectionState.done) {
           // simple shimmer placeholder
           return _ShimmerBox(height: 220);
         }
-        final items = snap.data ?? [];
+        if (snap.hasError) {
+          return _ShimmerBox(height: 220);
+        }
+  final items = snap.data ?? [];
         if (items.isEmpty) return const SizedBox.shrink();
         return LayoutBuilder(builder: (context, constraints) {
-          final width = constraints.maxWidth;
-          final aspect = _aspectFor(width);
+          final w = constraints.maxWidth.clamp(320.0, 1920.0);
+          final aspect = heroAspectFor(w);
+          final hasMultiple = items.length > 1;
+          // Update autoplay source count and restart if it changed
+          if (_count != items.length) {
+            _count = items.length;
+            _restartAuto();
+          }
+          final dotIndex = _index.clamp(0, items.length - 1);
           return Column(
             children: [
-              SizedBox(
-                height: (constraints.maxWidth * (1 / aspect)).clamp(160.0, 360.0),
-                child: PageView.builder(
-                  controller: _controller,
-                  itemCount: items.length,
-                  onPageChanged: (i) => setState(() => _index = i),
-                  itemBuilder: (context, i) => _FeaturedSlide(item: items[i]),
+              Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1400, maxHeight: 420),
+                  child: AspectRatio(
+                    aspectRatio: aspect,
+                    child: Stack(
+                      children: [
+                        NotificationListener<ScrollNotification>(
+                          onNotification: (n) {
+                            if (n is ScrollStartNotification) {
+                              _paused = true;
+                            } else if (n is ScrollEndNotification) {
+                              _paused = false;
+                            }
+                            return false;
+                          },
+                          child: PageView.builder(
+                            controller: _controller,
+                            physics: const PageScrollPhysics(),
+                            onPageChanged: (i) => setState(() => _index = i),
+                            itemCount: items.length,
+                            itemBuilder: (ctx, i) {
+                              final p = items[i];
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 8),
+                                child: _SlideCard(key: ValueKey('feat_${p.id}'), product: p),
+                              );
+                            },
+                          ),
+                        ),
+                        if (hasMultiple)
+                          Positioned(
+                          left: 0,
+                          top: 0,
+                          bottom: 0,
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: IconButton.filledTonal(
+                              tooltip: 'Anterior',
+                              onPressed: () {
+                                final prev = (_index - 1) < 0 ? items.length - 1 : _index - 1;
+                                _controller.animateToPage(prev, duration: const Duration(milliseconds: 280), curve: Curves.easeOut);
+                              },
+                              icon: const Icon(Icons.chevron_left),
+                            ),
+                          ),
+                        ),
+                        if (hasMultiple)
+                          Positioned(
+                          right: 0,
+                          top: 0,
+                          bottom: 0,
+                          child: Align(
+                            alignment: Alignment.centerRight,
+                            child: IconButton.filledTonal(
+                              tooltip: 'Próximo',
+                              onPressed: () {
+                                final next = (_index + 1) % items.length;
+                                _controller.animateToPage(next, duration: const Duration(milliseconds: 280), curve: Curves.easeOut);
+                              },
+                              icon: const Icon(Icons.chevron_right),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 6,
-                children: [
-                  for (int i = 0; i < items.length; i++)
-                    AnimatedContainer(
-                      duration: AppTokens.fast,
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: i == _index ? Theme.of(context).colorScheme.primary : Theme.of(context).disabledColor,
-                      ),
-                    ),
-                ],
-              ),
+              const SizedBox(height: 12),
+              if (hasMultiple) _Dots(count: items.length, index: dotIndex, controller: _controller),
             ],
           );
         });
@@ -96,97 +204,110 @@ class _FeaturedCarouselState extends ConsumerState<FeaturedCarousel> {
   }
 }
 
-class _FeaturedSlide extends StatelessWidget {
-  const _FeaturedSlide({required this.item});
-  final Produto item;
-
+class _SlideCard extends ConsumerWidget {
+  const _SlideCard({super.key, required this.product});
+  final Produto product;
+  
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Semantics(
-      label: 'Destaque: ${item.nome}',
+      label: 'Destaque: ${product.nome}',
       button: true,
-      child: Focus(
-        child: InkWell(
-          onTap: () => context.push('/produto/${item.id}'),
-          mouseCursor: SystemMouseCursors.click,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 6.0),
-            child: AspectRatio(
-              aspectRatio: 16 / 9,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  if (item.imagemUrl != null)
-                    Image.network(
-                      item.imagemUrl!,
-                      fit: BoxFit.cover,
-                      gaplessPlayback: true,
-                    )
-                  else
-                    Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Theme.of(context).colorScheme.primary.withOpacity(0.15), Colors.transparent],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(AppTokens.r12),
-                      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(18),
+        child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // imagem responsiva
+          if (product.imagemUrl != null)
+            Image.network(
+              product.imagemUrl!,
+              fit: BoxFit.cover,
+              alignment: Alignment.center,
+              cacheWidth: 1600,
+              cacheHeight: 800,
+            )
+          else
+            Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0x220F766E), Color(0x00000000)],
+                ),
+              ),
+            ),
+          // gradiente para legibilidade
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.bottomCenter,
+                end: Alignment.center,
+                colors: [Color(0xB3000000), Color(0x00000000)],
+              ),
+            ),
+          ),
+          // conteúdo
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Align(
+              alignment: Alignment.bottomLeft,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 520),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      product.nome,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
                     ),
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(AppTokens.r12),
-                      gradient: LinearGradient(
-                        colors: [Colors.black.withOpacity(0.4), Colors.transparent],
-                        begin: Alignment.bottomCenter,
-                        end: Alignment.topCenter,
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    left: 16,
-                    bottom: 16,
-                    right: 16,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 8,
                       children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                item.nome,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.white),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                item.preco > 0 ? 'R\$ ${item.preco.toStringAsFixed(2)}' : '',
-                                style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.white70),
-                              ),
-                            ],
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(minWidth: 120, maxWidth: 220),
+                          child: FilledButton(
+                            onPressed: () => context.push('/produto/${product.id}'),
+                            child: const Text('Ver produto'),
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(minWidth: 120),
-                            child: FilledButton(
-                              onPressed: () => context.push('/produto/${item.id}'),
-                              child: const Text('Ver produto'),
-                            ),
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(minWidth: 120, maxWidth: 220),
+                          child: OutlinedButton(
+                            onPressed: () async {
+                              try {
+                                await ref.read(cartControllerProvider).addToCart(
+                                      produtoId: product.id,
+                                      nome: product.nome,
+                                      preco: product.preco,
+                                    );
+                                if (!context.mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Adicionado ao carrinho')));
+                              } on MergeConflict {
+                                if (!context.mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Estoque insuficiente')));
+                              }
+                            },
+                            child: const Text('Adicionar'),
                           ),
                         ),
                       ],
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
-        ),
+        ],
+      ),
       ),
     );
   }
@@ -224,6 +345,40 @@ class _ShimmerBoxState extends State<_ShimmerBox> with SingleTickerProviderState
           borderRadius: BorderRadius.circular(AppTokens.r12),
         ),
       ),
+    );
+  }
+}
+
+class _Dots extends StatelessWidget {
+  const _Dots({required this.count, required this.index, required this.controller});
+  final int count;
+  final int index;
+  final PageController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 6,
+      children: List.generate(count, (i) {
+        final active = i == index;
+        return InkWell(
+          onTap: () => controller.animateToPage(
+            i,
+            duration: const Duration(milliseconds: 320),
+            curve: Curves.easeOut,
+          ),
+          borderRadius: BorderRadius.circular(99),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            width: active ? 18 : 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: active ? Theme.of(context).colorScheme.primary : Colors.grey.shade500,
+              borderRadius: BorderRadius.circular(99),
+            ),
+          ),
+        );
+      }),
     );
   }
 }

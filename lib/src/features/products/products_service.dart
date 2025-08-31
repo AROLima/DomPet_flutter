@@ -18,12 +18,13 @@ class ProductsService {
     return list.map(Produto.fromJson).toList();
   }
 
-  Future<PageResult<Produto>> search({String? nome, String? categoria, int page = 0, int size = 20}) async {
+  Future<PageResult<Produto>> search({String? nome, String? categoria, int page = 0, int size = 20, String? sort}) async {
     final res = await _dio.get('/produtos/search', queryParameters: {
       if (nome != null && nome.isNotEmpty) 'nome': nome,
       if (categoria != null && categoria.isNotEmpty) 'categoria': categoria,
       'page': page,
       'size': size,
+      if (sort != null) 'sort': sort,
     });
     if (res.statusCode == 204 || res.data == null || (res.data is String && (res.data as String).isEmpty)) {
       return PageResult<Produto>(

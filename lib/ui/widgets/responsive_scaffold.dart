@@ -3,6 +3,8 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../design_system.dart';
 import '../../src/features/cart/cart_service.dart';
+import '../../src/core/auth/session.dart';
+import 'app_drawer.dart';
 
 class ResponsiveScaffold extends ConsumerWidget {
   const ResponsiveScaffold({super.key, required this.body, this.title, this.actions, this.fab, this.drawer});
@@ -18,6 +20,7 @@ class ResponsiveScaffold extends ConsumerWidget {
       final width = constraints.maxWidth;
       final padding = appPaddingFor(width);
 
+  final isMD = width >= AppBreakpoints.md;
       return Scaffold(
         appBar: AppBar(
           title: title ?? const Text('DomPet'),
@@ -31,16 +34,29 @@ class ResponsiveScaffold extends ConsumerWidget {
             ...?actions,
           ],
         ),
-        drawer: width < AppBreakpoints.xs ? (drawer ?? const _DefaultDrawer()) : null,
+  // Show modal drawer on small screens; show permanent drawer from md+
+  drawer: width < AppBreakpoints.md ? (drawer ?? const AppDrawer()) : null,
         floatingActionButton: fab,
-        body: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: maxContentWidth),
-            child: Padding(
-              padding: padding,
-              child: body,
+        body: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+      if (isMD)
+              SizedBox(
+                width: 280,
+        child: drawer ?? const AppDrawer(),
+              ),
+            Expanded(
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: maxContentWidth),
+                  child: Padding(
+                    padding: padding,
+                    child: body,
+                  ),
+                ),
+              ),
             ),
-          ),
+          ],
         ),
       );
     });
@@ -113,32 +129,4 @@ class _CartButtonState extends ConsumerState<_CartButton> with SingleTickerProvi
   }
 }
 
-class _DefaultDrawer extends StatelessWidget {
-  const _DefaultDrawer();
-  @override
-  Widget build(BuildContext context) {
-    return Drawer(
-      child: ListView(
-        padding: EdgeInsets.zero,
-        children: [
-          const DrawerHeader(child: Text('DomPet')),
-          ListTile(
-            leading: const Icon(Icons.home_outlined),
-            title: const Text('Início'),
-            onTap: () => context.go('/'),
-          ),
-          ListTile(
-            leading: const Icon(Icons.person_outline),
-            title: const Text('Perfil'),
-            onTap: () => context.go('/perfil'),
-          ),
-          ListTile(
-            leading: const Icon(Icons.shopping_cart_outlined),
-            title: const Text('Carrinho'),
-            onTap: () => context.go('/cart'),
-          ),
-        ],
-      ),
-    );
-  }
-}
+// Drawer moved to AppDrawer for reuse

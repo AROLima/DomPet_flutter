@@ -65,9 +65,10 @@ class ProdutoDetalhe {
     required this.preco,
     required this.estoque,
     required this.ativo,
-    this.categoria,
+  this.categoria,
     this.imagemUrl,
     this.descricao,
+  this.sku,
   });
 
   final int id;
@@ -78,6 +79,7 @@ class ProdutoDetalhe {
   final String? categoria;
   final String? imagemUrl;
   final String? descricao;
+  final String? sku;
 
   factory ProdutoDetalhe.fromJson(Map<String, dynamic> json) {
     String? img = json['imagemUrl'] as String?;
@@ -98,7 +100,8 @@ class ProdutoDetalhe {
       ativo: json['ativo'] as bool,
       categoria: json['categoria'] as String?,
       imagemUrl: img,
-      descricao: json['descricao'] as String?,
+  descricao: json['descricao'] as String?,
+  sku: json['sku'] as String?,
     );
   }
 
@@ -111,6 +114,7 @@ class ProdutoDetalhe {
         if (categoria != null) 'categoria': categoria,
         if (imagemUrl != null) 'imagemUrl': imagemUrl,
         if (descricao != null) 'descricao': descricao,
+    if (sku != null) 'sku': sku,
       };
 }
 

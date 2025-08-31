@@ -5,6 +5,7 @@ import 'core/auth/session.dart';
 import 'features/auth/pages/login_page.dart';
 import 'features/auth/pages/register_page.dart';
 import 'features/products/pages/home_page.dart';
+import 'features/home/home_shell.dart';
 import 'features/products/pages/product_detail_page.dart';
 import 'features/cart/pages/cart_page.dart';
 import 'features/orders/pages/checkout_page.dart';
@@ -12,6 +13,7 @@ import 'features/orders/pages/orders_page.dart';
 import 'features/orders/pages/order_detail_page.dart';
 import 'features/profile/profile_page.dart';
 import 'shared/splash_page.dart';
+import '../features/admin/products/admin_produto_form_page.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -40,6 +42,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/',
         name: 'home',
+        builder: (context, state) => const HomeShell(),
+      ),
+      GoRoute(
+        path: '/produtos',
+        name: 'produtos',
         builder: (context, state) => const HomePage(),
       ),
       GoRoute(
@@ -92,6 +99,31 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         redirect: (context, state) {
           final session = ref.read(sessionProvider).value;
           if (session == null) return '/login';
+          return null;
+        },
+      ),
+      // Admin: produtos
+      GoRoute(
+        path: '/admin/produtos/novo',
+        name: 'adminProdutosNovo',
+        builder: (context, state) => const AdminProdutoFormPage(),
+        redirect: (context, state) {
+          final session = ref.read(sessionProvider).value;
+          final roles = session?.roles ?? const <String>[];
+          if (session == null) return '/login';
+          if (!(roles.contains('ADMIN') || roles.contains('ROLE_ADMIN'))) return '/';
+          return null;
+        },
+      ),
+      GoRoute(
+        path: '/admin/produtos/:id/editar',
+        name: 'adminProdutosEditar',
+        builder: (context, state) => AdminProdutoFormPage(editarId: int.tryParse(state.pathParameters['id'] ?? '')), 
+        redirect: (context, state) {
+          final session = ref.read(sessionProvider).value;
+          final roles = session?.roles ?? const <String>[];
+          if (session == null) return '/login';
+          if (!(roles.contains('ADMIN') || roles.contains('ROLE_ADMIN'))) return '/';
           return null;
         },
       ),

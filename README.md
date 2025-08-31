@@ -12,6 +12,7 @@ Uma loja virtual de petshop feita em Flutter (Web/Mobile) com foco em performanc
 - Carrossel de destaques (aparece em telas médias+)
 - Fluxos de login/registro, checkout e pedidos
 - Página de perfil do usuário (rota protegida)
+- Admin: tela de criar/editar produto (restrita a ADMIN), incluindo campo SKU opcional
 
 ## 🗺️ Rotas principais
 - `/` Home (lista e busca de produtos)
@@ -21,6 +22,10 @@ Uma loja virtual de petshop feita em Flutter (Web/Mobile) com foco em performanc
 - `/pedidos` e `/pedidos/:id` (protegidas)
 - `/perfil` Página de perfil (protegida)
 - `/login`, `/register`, `/splash`
+  
+Admin (restritas a ADMIN):
+- `/admin/produtos/novo`
+- `/admin/produtos/:id/editar`
 
 ## 🏗️ Arquitetura e pastas
 ```
@@ -64,13 +69,28 @@ Este frontend consome o backend Spring Boot (DomPet). Endpoints usados (principa
 - `GET /produtos/search` (q, categoria, page, size)
 - `GET /produtos/{id}`
 - `GET /produtos/categorias`
+- `GET /produtos/suggestions?q=&limit=`
 - `POST /cart` e correlatos (dependendo da sua API de carrinho)
 - `GET /usuarios/me` (rota protegida por JWT)
+
+Admin (requer ROLE_ADMIN/ADMIN):
+- `POST /produtos`
+- `PUT /produtos/{id}`
+- `DELETE /produtos/{id}`
 
 ### Base URL da API
 O cliente Dio (em `lib/src/core/http/api_client.dart`) centraliza a `baseUrl` e os interceptors. Se precisar apontar para outro host/porta, altere lá a constante/configuração da `baseUrl`.
 
 Para Android emulador, a convenção é `http://10.0.2.2:8080`. Para Web/desktop, normalmente `http://localhost:8080`.
+
+### Swagger / OpenAPI
+- UI: `http://localhost:8080/swagger-ui.html`
+- JSON: `http://localhost:8080/v3/api-docs`
+
+Como autorizar na UI:
+1) Execute `POST /auth/login` na seção Auth para obter o `token`.
+2) Clique em Authorize (cadeado) e cole como `Bearer <token>`.
+3) Os endpoints protegidos ficam utilizáveis na própria UI.
 
 ## ▶️ Como rodar
 Pré-requisitos: Flutter 3.22+ e Dart 3.4+.
@@ -125,6 +145,7 @@ Notas:
 ## 🧭 Navegação
 - `GoRouter` com redirects simples para rotas protegidas
 - Acesso rápido ao Perfil pelo ícone no AppBar e pelo Drawer
+- Rotas de Admin protegidas por roles: exige `ADMIN` ou `ROLE_ADMIN` no JWT; se ausente, a aplicação pode consultar `/usuarios/me` para derivar o papel
 
 ## 🐛 Troubleshooting
 - Imagem estourando/overflow no card:
@@ -243,7 +264,7 @@ Cobertura de testes incluída
 - Widget: lista de produtos via /produtos/search (Dio mockado por HttpClientAdapter fake)
 
 Notas sobre ETag
-- O interceptor adiciona If-None-Match para GET /produtos/{id} quando há etag em cache (SharedPreferences)
+- O interceptor adiciona `If-None-Match` para `GET /produtos/{id}` quando há `ETag` em cache (SharedPreferences)
 - Em 304, serve a resposta do cache e retorna 200 para a UI
 
 Dicas de troubleshooting

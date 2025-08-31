@@ -22,6 +22,7 @@ class _HomePageState extends ConsumerState<HomePage> {
   String? _categoria;
   int _page = 0;
   Timer? _debouncer;
+  bool _initFromQuery = false;
 
   @override
   void initState() {
@@ -43,6 +44,31 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_initFromQuery) return;
+    try {
+      String? loc;
+      final r = Router.maybeOf(context);
+      if (r?.routeInformationProvider case final p?) {
+        final info = p.value;
+        loc = info.location;
+      }
+      loc ??= Uri.base.toString();
+      final uri = Uri.parse(loc);
+      final q = uri.queryParameters['q'];
+      final cat = uri.queryParameters['categoria'];
+      if (q != null && q.isNotEmpty) {
+        _searchCtrl.text = q;
+      }
+      if (cat != null && cat.isNotEmpty) {
+        _categoria = cat;
+      }
+    } catch (_) {}
+    _initFromQuery = true;
+  }
+
+  @override
   Widget build(BuildContext context) {
     final q = ProductsQuery(nome: _searchCtrl.text, categoria: _categoria, page: _page, size: 20);
     final pageAsync = ref.watch(productsSearchProvider(q));
@@ -53,11 +79,7 @@ class _HomePageState extends ConsumerState<HomePage> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          LayoutBuilder(
-            builder: (context, constraints) => constraints.maxWidth >= AppBreakpoints.md
-                ? const FeaturedCarousel()
-                : const SizedBox.shrink(),
-          ),
+          const FeaturedCarousel(),
           const SizedBox(height: 12),
           Row(
             children: [
@@ -78,7 +100,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                   hint: const Text('Categoria'),
                   items: [
                     const DropdownMenuItem<String?>(value: null, child: Text('Todas')),
-                    ...cats.map((c) => DropdownMenuItem<String?>(value: c, child: Text(c))).toList(),
+                    ...cats.map((c) => DropdownMenuItem<String?>(value: c, child: Text(c))),
                   ],
                   onChanged: (v) => setState(() {
                     _categoria = v;
@@ -99,11 +121,14 @@ class _HomePageState extends ConsumerState<HomePage> {
                     Expanded(
                       child: GridView.builder(
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: gridCrossAxisCountFor(constraints.maxWidth),
+                          crossAxisCount: gridColsFor(constraints.maxWidth),
                           mainAxisSpacing: 12,
                           crossAxisSpacing: 12,
-                          // slightly taller tiles on narrow screens to avoid overflows
-                          childAspectRatio: (constraints.maxWidth < AppBreakpoints.md) ? 0.68 : 0.85,
+              childAspectRatio: (constraints.maxWidth < AppBreakpoints.xs)
+                ? 0.56
+                : (constraints.maxWidth < AppBreakpoints.md)
+                  ? 0.66
+                  : 0.82,
                         ),
                         itemCount: page.content.length,
                         itemBuilder: (_, i) => _ProductCard(
@@ -161,19 +186,16 @@ class _ProductCardState extends ConsumerState<_ProductCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceVariant,
-                  borderRadius: BorderRadius.circular(8),
-                ),
+            AspectRatio(
+              aspectRatio: 4 / 3,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
                 child: produto.imagemUrl != null
                     ? Image.network(
                         produto.imagemUrl!,
-                        fit: BoxFit.contain,
+                        fit: BoxFit.cover,
                       )
-                    : const Icon(Icons.pets, size: 48),
+                    : Container(color: Theme.of(context).colorScheme.surfaceContainerHighest),
               ),
             ),
             const SizedBox(height: 8),
@@ -186,9 +208,12 @@ class _ProductCardState extends ConsumerState<_ProductCard> {
             const SizedBox(height: 4),
             Text('R\$ ${produto.preco.toStringAsFixed(2)}'),
             const SizedBox(height: 8),
-            Row(
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
               children: [
-                Expanded(
+                ConstrainedBox(
+                  constraints: const BoxConstraints(minWidth: 120, maxWidth: 220),
                   child: FilledButton(
                     onPressed: (!_loading && produto.estoque > 0)
                         ? () async {
@@ -218,10 +243,12 @@ class _ProductCardState extends ConsumerState<_ProductCard> {
                         : const Text('Adicionar'),
                   ),
                 ),
-                const SizedBox(width: 8),
-                OutlinedButton(
-                  onPressed: () => context.push('/produto/${produto.id}'),
-                  child: const Text('Ver'),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(minWidth: 120, maxWidth: 220),
+                  child: OutlinedButton(
+                    onPressed: () => context.push('/produto/${produto.id}'),
+                    child: const Text('Ver'),
+                  ),
                 ),
               ],
             ),
