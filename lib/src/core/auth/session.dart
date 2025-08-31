@@ -1,8 +1,27 @@
+// DIDACTIC: Session model and persistence provider
+//
+// Purpose:
+// - Represent an authenticated user's JWT session, expose expiry helpers,
+//   and persist the token securely between app launches.
+//
+// Contract:
+// - `Session` holds `token` and `expiresAt` and provides convenience helpers
+//   (isExpired, roles extraction).
+// - `SessionNotifier` is an AsyncNotifier that loads/saves the session to
+//   `FlutterSecureStorage` and exposes reactive session state via
+//   `sessionProvider`.
+//
+// Security notes:
+// - Tokens are stored in secure storage; avoid logging full tokens.
+
 import 'dart:async';
 import 'dart:convert';
-
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:crypto/crypto.dart';
+import 'package:convert/convert.dart';
+
+part 'session_provider.g.dart';
 
 class Session {
   Session({required this.token, required this.expiresAt});
@@ -25,7 +44,8 @@ class Session {
   }
 
   /// Extracts roles from JWT payload if present. Supports common claims:
-  /// roles, authorities, scope/scopes, realm_access.roles
+  /// `roles`, `authorities`, `scope`/`scopes` and `realm_access.roles`.
+  /// This is a best-effort helper for UI decisions (show/hide admin links).
   List<String> get roles {
     try {
       final parts = token.split('.');
@@ -61,6 +81,7 @@ class Session {
   }
 }
 
+// Secure storage provider used to persist token between launches.
 final _storageProvider = Provider((ref) => const FlutterSecureStorage());
 
 class SessionNotifier extends AsyncNotifier<Session?> {
@@ -106,9 +127,10 @@ class SessionNotifier extends AsyncNotifier<Session?> {
   }
 
   Future<void> _tryRefreshToken() async {
-    // O interceptor HTTP chamará /auth/refresh automaticamente antes de requests.
-    // Este timer assegura que mesmo sem requests recentes, iremos revalidar próximo ao vencimento.
-    // Aqui podemos acionar um ping leve se necessário no futuro.
+    // The HTTP interceptor will attempt a refresh automatically before requests.
+    // This timer guarantees a refresh attempt even when the app is idle near
+    // token expiration. Currently it's a no-op placeholder but kept for future
+    // proactive network pings or telemetry.
   }
 }
 

@@ -5,6 +5,25 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../shared/models/cart.dart';
 import '../products/products_service.dart';
 
+// DIDACTIC: LocalCart — ephemeral local cart persistence and delta model
+//
+// Purpose:
+// - Store local cart deltas and provide merge helpers for syncing with remote
+//   cart on login/checkout.
+//
+// Contract:
+// - Inputs: add/remove delta operations, local-only negative IDs for new items.
+// - Outputs: a compact change-set used to reconcile with server state.
+// - Error modes: merge conflicts surfaced as `MergeConflict` for higher layers.
+//
+// Notes:
+// - Keep storage small (SharedPreferences / small store) and avoid duplicating
+//   authoritative cart logic found on the server.
+
+// Local cart implementation stored in SharedPreferences. This is used while the
+// user is anonymous. On login the app attempts to merge local items into the
+// remote cart using `mergeIntoRemote`, handling 409 conflicts by checking the
+// latest stock and adjusting quantities where possible.
 final localCartProvider = FutureProvider<LocalCart>((ref) async {
   final prefs = await SharedPreferences.getInstance();
   return LocalCart(ref, prefs);
@@ -76,7 +95,7 @@ class LocalCart {
 
   Future<void> clear() async => _prefs.remove(_key);
 
-  /// Merge: GET /cart, POST cada item local; se 409, buscar estoque e ajustar qty.
+  /// Merge: GET /cart, POST each local item; on 409, fetch stock and adjust qty.
   Future<void> mergeIntoRemote(CartService remote) async {
     final local = _get();
     if (local.itens.isEmpty) return;
@@ -85,13 +104,14 @@ class LocalCart {
       try {
         await remote.addItem(produtoId: item.produtoId, quantidade: item.quantidade);
   } on MergeConflict {
-        // tenta ajustar com base no estoque atual do produto
+        // try to adjust based on live stock
         final estoque = await _getEstoque(item.produtoId);
         final novaQtd = estoque > 0 ? (item.quantidade > estoque ? estoque : item.quantidade) : 0;
         if (novaQtd > 0) {
           await remote.addItem(produtoId: item.produtoId, quantidade: novaQtd);
         }
-        // informa via callback opcional (poderia acoplar a um notifier/UI)
+        // an optional UI notification channel could be used here to inform
+        // the user about quantity adjustments.
       }
     }
     await clear();

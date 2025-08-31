@@ -1,3 +1,25 @@
+// DIDACTIC: OrdersService — order creation & retrieval
+//
+// Purpose:
+// - Encapsulate order-related network calls (create order, list user orders,
+//   fetch order detail) and map HTTP responses to domain models.
+//
+// Contract:
+// - Inputs: order payloads and user context.
+// - Outputs: typed `Pedido`/`Order` models and paginated results.
+// - Error modes: failures return ProblemDetail-mapped exceptions; idempotency
+//   considerations should be handled by the API (client retries kept minimal).
+//
+// Notes:
+// - Avoid embedding cart merge logic here; this service focuses on orders only.
+
+// Orders service layer.
+// Contract:
+// - Exposes checkout, list and getById; normalizes 204/empty responses to empty
+//   PageResult to simplify UI code.
+// Edge cases:
+// - Checkout serializes `EnderecoDto` explicitly; payment methods are optional.
+
 import 'package:dio/dio.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../core/http/api_client.dart';

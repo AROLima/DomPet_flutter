@@ -1,3 +1,13 @@
+// DIDACTIC: Cart models (Carrinho, ItemCarrinho)
+// Purpose:
+// - Small DTOs used by both local and remote cart services. Keep the shape
+//   stable because both persistence and API endpoints rely on it.
+// Contract:
+// - Remote `itemId` may be positive; local temporary items may use negative
+//   ids as ephemeral identifiers until synced with the server.
+// Edge cases / Notes:
+// - `fromJson` tolerates missing lists by returning an empty item list.
+
 // Implementação manual para evitar arquivos gerados do Freezed.
 
 class ItemCarrinho {

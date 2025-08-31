@@ -1,3 +1,20 @@
+// DIDACTIC: SectionHeader — small reusable UI for section titles
+//
+// Purpose:
+// - Render a standardized section title with optional action (See all).
+//
+// Contract:
+// - Inputs: title text and optional onTap callback for the action.
+// - Outputs: a fully accessible row with semantics for screen readers.
+//
+// Notes:
+// - Keep styling minimal and theme-driven so it adapts to dark/light modes.
+
+// Small reusable section header used across the app for list titles.
+// Contract:
+// - Pure visual widget that displays a title and optional action button.
+// - Keep it simple to maximize reusability across screens.
+
 import 'package:flutter/material.dart';
 
 class SectionHeader extends StatelessWidget {

@@ -1,3 +1,25 @@
+// DIDACTIC: ProfilePage — user profile and account settings
+//
+// Purpose:
+// - Display user profile information and provide actions like logout and
+//   editing basic account details.
+//
+// Contract:
+// - Inputs: authenticated user session and profile data provider.
+// - Outputs: logout action, navigation to editing flows and order history.
+//
+// Notes:
+// - Avoid putting heavy network logic here; use providers/services for
+//   updates and optimistic UI when appropriate.
+
+// Profile page UI.
+// Contract:
+// - Uses `profileProvider` to fetch the current user data and shows basic
+//   fields. Keep UI read-only; editing belongs to dedicated flows.
+// Edge cases:
+// - Provider errors are surfaced as a simple error text; consider mapping
+//   ProblemDetail for friendlier messages in the future.
+
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../core/http/api_client.dart';

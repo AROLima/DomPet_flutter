@@ -1,9 +1,30 @@
+// DIDACTIC: ProductCard — reusable product presentation
+//
+// Purpose:
+// - Render a product tile used across lists, carousels and grids and expose
+//   primary actions (view, add to cart) with accessible interactions.
+//
+// Contract:
+// - Inputs: `Produto` instance and optional `onView` callback.
+// - Side effects: calls `CartController.addToCart` and handles `MergeConflict`.
+// - Error modes: displays disabled controls for out-of-stock items, shows
+//   SnackBars for success/failure.
+//
+// Accessibility:
+// - Uses `FocusTraversalGroup` and proper tap/focus feedback to support
+//   keyboard/mouse users.
+
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../cart/cart_service.dart';
 import '../../cart/local_cart.dart' show MergeConflict;
 import '../../../shared/models/product.dart';
 
+// Reusable product card used across home / lists.
+// Accessibility: uses InkWell + FocusTraversalGroup to keep keyboard and
+// mouse interactions consistent. The `Adicionar` button describes optimistic
+// interactions via SnackBars and handles MergeConflict thrown by remote cart
+// operations.
 class ProductCard extends ConsumerStatefulWidget {
   const ProductCard({super.key, required this.product, this.onView});
   final Produto product;

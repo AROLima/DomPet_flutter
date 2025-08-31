@@ -1,3 +1,26 @@
+// DIDACTIC: ProductDetailPage — product detail and add-to-cart flow
+//
+// Purpose:
+// - Show full product information and allow the user to add items to the cart.
+//
+// Contract:
+// - Inputs: product id or pre-fetched `Produto` instance.
+// - Outputs: add-to-cart actions and navigation to related items.
+// - Error modes: handle 404s by showing a not-found screen and map server
+//   validation errors to user-friendly messages.
+//
+// Notes:
+// - Keep heavy network calls in providers/services; the page should be mostly
+//   composition and local UI state.
+
+// Product detail page.
+// Contract:
+// - Fetches `ProdutoDetalhe` via `productDetailProvider` and displays a
+//   responsive layout (row for wide, list for narrow).
+// - Action buttons interact with shared `CartController` and show SnackBars.
+// Edge cases:
+// - UI handles loading/error async states from the provider.
+
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../shared/models/product.dart';
@@ -7,6 +30,9 @@ import '../products_service.dart';
 import '../../../../ui/widgets/responsive_scaffold.dart';
 import '../../../../ui/design_system.dart';
 
+// Layout switches between a row (wide) and vertical list (narrow) to make good
+// use of space on larger screens. Actions such as "Adicionar" call into the
+// shared cart controller and show simple SnackBars on success/failure.
 class ProductDetailPage extends ConsumerWidget {
   const ProductDetailPage({super.key, required this.id});
   final String id;

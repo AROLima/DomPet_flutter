@@ -1,3 +1,19 @@
+// DIDACTIC: Router and route guards for the application.
+//
+// Purpose (short):
+// - Centralizes named routes and navigation rules used by the whole app.
+// - Keeps route protection logic (redirects) declarative and reactive by
+//   listening to `sessionProvider` so login/logout immediately affect routing.
+//
+// Contract / responsibilities:
+// - Input: navigation events and current Session (via Riverpod).
+// - Output: GoRouter configuration that maps paths to builders and redirects.
+// - Error modes: invalid/missing session -> redirect to '/login';
+//   unauthorized role -> redirect to '/'.
+//
+// Notes for readers:
+// - Keep this file thin: complex auth or feature logic belongs to services.
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -22,7 +38,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
     initialLocation: '/splash',
-    refreshListenable: ref.watch(_routerRefreshProvider),
+  // The router listens to this notifier so it can re-evaluate redirects
+  // when the session changes (login/logout). This keeps route protection
+  // reactive without tightly coupling the router to session internals.
+  refreshListenable: ref.watch(_routerRefreshProvider),
     routes: [
       GoRoute(
         path: '/splash',

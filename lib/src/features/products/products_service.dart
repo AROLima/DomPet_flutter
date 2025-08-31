@@ -1,3 +1,18 @@
+// DIDACTIC: Products service layer
+//
+// Purpose:
+// - Encapsulate all product-related network calls (list, search, detail,
+//   suggestions, categories) and normalize HTTP shapes for the UI.
+//
+// Contract:
+// - Inputs: query parameters and IDs from UI code.
+// - Outputs: typed domain objects (`Produto`, `ProdutoDetalhe`, `PageResult<Produto>`, etc.).
+// - Error modes: network errors propagate as DioExceptions; empty/204
+//   responses are normalized to empty collections to simplify callers.
+//
+// Notes:
+// - Keep service methods small and deterministic so they are easy to unit-test.
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -5,6 +20,9 @@ import '../../core/http/api_client.dart';
 import '../../shared/models/page_result.dart';
 import '../../shared/models/product.dart';
 
+// Service responsible for product-related API calls: list, search, details and
+// suggestions. The service returns plain Dart objects defined in
+// `shared/models/product.dart`.
 final productsServiceProvider = Provider<ProductsService>((ref) => ProductsService(ref));
 
 class ProductsService {
@@ -27,6 +45,8 @@ class ProductsService {
       if (sort != null) 'sort': sort,
     });
     if (res.statusCode == 204 || res.data == null || (res.data is String && (res.data as String).isEmpty)) {
+      // Normalize empty responses to an empty PageResult so callers don't
+      // need to handle null/204 specially.
       return PageResult<Produto>(
         content: const [],
         number: page,
@@ -63,7 +83,7 @@ class ProductsService {
   }
 }
 
-// Providers
+// Providers used by UI layers: categories, search and detail providers.
 final categoriasProvider = FutureProvider.autoDispose<List<String>>((ref) => ref.read(productsServiceProvider).getCategorias());
 
 @immutable

@@ -1,3 +1,23 @@
+// DIDACTIC: OrdersPage — list of user orders
+//
+// Purpose:
+// - Present a paginated list of past orders and allow navigation to details.
+//
+// Contract:
+// - Inputs: authenticated user context and paginated orders provider.
+// - Outputs: navigation to `OrderDetailPage`.
+//
+// Notes:
+// - Use `PageResult` parsing helpers provided in shared models for pagination.
+
+// Orders listing page.
+// Contract:
+// - Fetches pages via `ordersServiceProvider.list` and shows pagination UI.
+// - Navigates to order detail via GoRouter on item tap.
+// Edge cases:
+// - Empty pages are represented as an empty message; network errors show
+//   an error message.
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';

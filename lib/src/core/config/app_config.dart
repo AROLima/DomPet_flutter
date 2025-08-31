@@ -1,9 +1,17 @@
-import 'package:flutter/foundation.dart';
-import 'package:hooks_riverpod/hooks_riverpod.dart';
-
-/// Onde alterar baseUrl e flavor (dev/prod).
-/// Ajuste aqui ou use --dart-define em builds futuros.
-/// Ex.: flutter run --dart-define=BASE_URL=http://10.0.2.2:8080 --dart-define=FLAVOR=dev
+// DIDACTIC: Application configuration and environment handling
+//
+// Purpose:
+// - Centralize runtime configuration resolved from `--dart-define` variables
+//   such as `BASE_URL` and `FLAVOR`.
+//
+// Contract:
+// - `AppConfig.fromEnv()` reads compile-time environment variables and
+//   performs host rewrites when running on an Android emulator (localhost -> 10.0.2.2).
+// - `appConfigProvider` exposes the resolved configuration via Riverpod.
+//
+// Notes:
+// - Keep environment-specific logic here to avoid scattering platform checks
+//   across the codebase.
 class AppConfig {
   AppConfig({required this.baseUrl, required this.flavor});
 
@@ -18,12 +26,12 @@ class AppConfig {
     try {
       final uri = Uri.parse(envBase);
       final isLocalHost = uri.host == 'localhost' || uri.host == '127.0.0.1';
-      // Reescreve localhost -> 10.0.2.2 apenas em Android nativo (não Web)
+      // Rewrite localhost -> 10.0.2.2 only on Android native (not Web).
       if (isLocalHost && !kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
         base = uri.replace(host: '10.0.2.2').toString();
       }
     } catch (_) {
-      // mantém valor original se parsing falhar
+      // keep original if parsing fails
     }
 
     return AppConfig(baseUrl: base, flavor: envFlavor);
@@ -32,5 +40,5 @@ class AppConfig {
 
 final appConfigProvider = Provider<AppConfig>((ref) => AppConfig.fromEnv());
 
-/// Header X-API-Version exposto para debug/logs.
+/// Header X-API-Version exposed for debug/logging and introspection.
 final apiVersionProvider = StateProvider<String?>((ref) => null);

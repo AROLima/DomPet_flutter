@@ -1,3 +1,18 @@
+// DIDACTIC: FeaturedCarousel — resilient homepage carousel
+//
+// Purpose:
+// - Render a carousel of highlighted products using multiple data sources
+//   (suggestions -> search -> getAll) with graceful fallbacks.
+//
+// Contract:
+// - Inputs: optional category filter.
+// - Output: a responsive carousel widget that exposes navigation and add-to-cart actions.
+// - Behavior: autoplay when multiple items; pauses on user interaction.
+//
+// Notes:
+// - Designed for resilience: it tries several endpoints and falls back to
+//   avoid empty UI sections on transient backend failures.
+
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -8,6 +23,10 @@ import '../../products/products_service.dart';
 import '../../../shared/models/product.dart';
 import '../../../../ui/design_system.dart';
 
+// Featured carousel used on the home page.
+// It tries a few data sources in order: suggestions -> search -> getAll, and
+// uses the first non-empty result. Autoplay is enabled when there is more than
+// one item and pauses while the user interacts (scroll start/end).
 class FeaturedCarousel extends ConsumerStatefulWidget {
   const FeaturedCarousel({super.key, this.category});
   final String? category;
@@ -60,11 +79,10 @@ class _FeaturedCarouselState extends ConsumerState<FeaturedCarousel> {
 
   Future<List<Produto>> _load() async {
     final service = ref.read(productsServiceProvider);
-    // 1) Tenta sugestões (rota /produtos/suggestions)
+    // 1) Try suggestions endpoint
     try {
       final sugs = await service.suggestions('', limit: 8);
-      // Caso a API de sugestões não traga preços/imagens, caímos para search;
-      // porém usamos os IDs para evitar duplicados no fallback.
+      // If suggestions exist, try to merge with search results to get images/prices
       final ids = sugs.map((e) => e.id).toSet();
       if (ids.isNotEmpty) {
     final page = await service.search(page: 0, size: 12, categoria: widget.category);
@@ -76,7 +94,7 @@ class _FeaturedCarouselState extends ConsumerState<FeaturedCarousel> {
       }
     } catch (_) {}
 
-    // 2) Fallback: primeira página do search
+    // 2) Fallback: first page of search
     try {
   final page = await service.search(page: 0, size: 8, categoria: widget.category);
       if (page.content.isNotEmpty) {
@@ -90,7 +108,7 @@ class _FeaturedCarouselState extends ConsumerState<FeaturedCarousel> {
       }
     } catch (_) {}
 
-    // 3) Último fallback: getAll (até 8 itens)
+    // 3) Last fallback: getAll (up to 8 items)
     try {
       final all = await service.getAll();
       return all.take(8).toList();
@@ -180,7 +198,7 @@ class _FeaturedCarouselState extends ConsumerState<FeaturedCarousel> {
                           child: Align(
                             alignment: Alignment.centerRight,
                             child: IconButton.filledTonal(
-                              tooltip: 'Próximo',
+                              tooltip: 'Pr\u00f3ximo',
                               onPressed: () {
                                 final next = (_index + 1) % items.length;
                                 _controller.animateToPage(next, duration: const Duration(milliseconds: 280), curve: Curves.easeOut);

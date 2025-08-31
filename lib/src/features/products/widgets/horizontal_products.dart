@@ -1,3 +1,18 @@
+// DIDACTIC: HorizontalProducts — small product section
+//
+// Purpose:
+// - Display a compact product section on the Home screen. It adapts layout
+//   to available width (horizontal list on narrow screens, grid on wider ones).
+//
+// Contract:
+// - Data source: attempts `search` via `ProductsService` and falls back to
+//   `getAll` on error to maximize content availability.
+// - Output: a list/grid of `Produto` items ready for rendering.
+//
+// Design note:
+// - This widget contains only UI composition; data selection logic is in an
+//   internal provider so caching/fallbacks remain testable.
+
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,6 +21,10 @@ import '../products_service.dart';
 import '../../../shared/models/product.dart';
 import 'product_card.dart';
 
+// A horizontal (or grid) product section used by Home screens.
+// The provider `_provider` first tries a search endpoint and falls back to
+// `getAll` when the server search fails, ensuring the homepage shows content
+// even during transient backend issues.
 class HorizontalProducts extends ConsumerWidget {
   const HorizontalProducts({super.key, required this.title, this.sort, this.size = 12, this.category});
   final String title;
@@ -175,7 +194,7 @@ class _ErrorBox extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Não foi possível carregar esta sessão agora. Tente novamente em instantes.',
+                  'N\u00e3o foi poss\u00edvel carregar esta sess\u00e3o agora. Tente novamente em instantes.',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onErrorContainer),
                 ),
               ),

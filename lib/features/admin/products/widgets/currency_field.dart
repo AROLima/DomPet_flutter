@@ -1,3 +1,17 @@
+// DIDACTIC: CurrencyField — numeric input widget specialized for money values
+//
+// Purpose:
+// - Provide a user-friendly input for currency values with proper formatting
+//   and validation.
+//
+// Contract:
+// - Inputs: initial numeric value and onChanged callback.
+// - Outputs: numeric value (double) in the expected minor units or decimal.
+//
+// Notes:
+// - Keep formatting/localization concerns in the widget; parsing/validation
+//   should remain deterministic for the controller to rely on.
+
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 

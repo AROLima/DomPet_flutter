@@ -1,3 +1,14 @@
+// DIDACTIC: PageResult<T> — paginated API response model
+// Purpose:
+// - Represent paginated lists returned by the API, keeping generic mapping
+//   explicit via a `fromJsonT` mapper.
+// Contract:
+// - `fromJson` accepts a mapper function to deserialize `T` and tolerates
+//   empty/204 responses by using empty content lists.
+// Edge cases / Notes:
+// - Numeric and boolean fields are parsed defensively to accept strings or
+//   numbers from inconsistent APIs.
+
 // Implementação manual de PageResult para evitar codegen.
 
 class PageResult<T> {

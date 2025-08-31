@@ -7,6 +7,11 @@ import '../../src/core/auth/session.dart';
 import 'app_drawer.dart';
 
 class ResponsiveScaffold extends ConsumerWidget {
+  /// Scaffold responsivo que adapta drawer/performance de layout com base em breakpoints.
+  ///
+  /// Dicas de estudo:
+  /// - Se a largura for >= md, exibimos o drawer permanentemente (desktop-like).
+  /// - A widget `_CartButton` observa o provider `cartCountProvider` e exibe badge condicionalmente.
   const ResponsiveScaffold({super.key, required this.body, this.title, this.actions, this.fab, this.drawer});
   final Widget body;
   final Widget? title;

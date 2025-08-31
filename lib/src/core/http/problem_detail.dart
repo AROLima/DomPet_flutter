@@ -1,3 +1,20 @@
+// DIDACTIC: RFC-7807 Problem Detail parser
+//
+// Purpose:
+// - Parse server error responses conforming (or similar) to RFC-7807 into a
+//   local `ProblemDetail` instance so UI layers and services can provide
+//   user-friendly messages and programmatic error handling.
+//
+// Contract:
+// - Input: a `Map<String, dynamic>` typically received from the HTTP layer.
+// - Output: a `ProblemDetail` instance that implements `Exception`.
+// - Error modes: parsing is defensive; unknown or missing fields fall back to
+//   reasonable defaults so callers can still display an error text.
+//
+// Notes:
+// - Validation errors (list of field messages) are surfaced in `toString()`
+//   so SnackBars and dialogs prefer direct user-facing messages.
+
 class ProblemDetail implements Exception {
   ProblemDetail({
     required this.type,

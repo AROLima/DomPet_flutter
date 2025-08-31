@@ -1,3 +1,28 @@
+// DIDACTIC: Product listing page (HomePage)
+//
+// Purpose:
+// - Provide a searchable, paginated product listing with filtering by
+//   category. It coordinates UI controls and providers to render results.
+//
+// Contract:
+// - Inputs: search query, selected category, pagination controls.
+// - Outputs: grid of products and navigation to product detail.
+// - Behavior: debounces user input (300ms) and parses `q`/`categoria` from
+//   the URL on first build to support deep links.
+//
+// Notes:
+// - Keep URL parsing defensive and avoid heavy logic in the widget; delegate
+//   data fetching to providers/services.
+
+// Product listing page with search and pagination.
+// Contract / behaviors:
+// - Debounces search input (300ms) to reduce request churn.
+// - Reads query params (`q`, `categoria`) from the URL on first build to
+//   support deep-links and preserve state between navigations.
+// - Uses providers for paginated search results.
+// Edge cases:
+// - URL parsing is defensive; fallback to Uri.base when router info is absent.
+
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -10,6 +35,10 @@ import '../../../../ui/widgets/responsive_scaffold.dart';
 import '../../../../ui/design_system.dart';
 import '../../home/widgets/featured_carousel.dart';
 
+// Key behaviors:
+// - debounce search input to avoid too many requests
+// - parse `q` and `categoria` from the URL on first build so links can
+//   pre-fill the state
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
 
@@ -144,7 +173,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                           onPressed: page.number > 0 ? () => setState(() => _page -= 1) : null,
                           icon: const Icon(Icons.chevron_left),
                         ),
-                        Text('Página ${page.number + 1} de ${page.totalPages}'),
+                        Text('P\u00e1gina ${page.number + 1} de ${page.totalPages}'),
                         IconButton(
                           onPressed: (page.number + 1) < page.totalPages ? () => setState(() => _page += 1) : null,
                           icon: const Icon(Icons.chevron_right),

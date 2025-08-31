@@ -1,3 +1,13 @@
+// DIDACTIC: Order models (Pedido, ItemPedido, EnderecoDto)
+// Purpose:
+// - Represent orders and their components for UI and services. Keep parsing
+//   explicit so errors surface at the HTTP boundary (ProblemDetail).
+// Contract:
+// - `createdAt` is ISO-8601 and parsed with DateTime.parse.
+// Edge cases / Notes:
+// - If the backend format changes, the parser will throw; prefer handling
+//   validation errors upstream in the HTTP layer.
+
 // Modelos manuais para evitar dependência de arquivos gerados do Freezed.
 
 class EnderecoDto {

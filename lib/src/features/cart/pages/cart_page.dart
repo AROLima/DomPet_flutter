@@ -1,3 +1,25 @@
+// DIDACTIC: CartPage — cart review and checkout entry
+//
+// Purpose:
+// - Let users review cart items, change quantities, and proceed to checkout.
+//
+// Contract:
+// - Inputs: cart provider state and item update callbacks.
+// - Outputs: navigation to checkout and cart update requests.
+// - Behavior: shows merge/conflict messages when server reports differences.
+//
+// Notes:
+// - Keep optimistic UI for small quantity changes but reconcile with server
+//   results and show errors when updates fail.
+
+// Cart page UI.
+// Contract:
+// - Loads current cart via `CartController.fetchCart()` and supports pull-to-refresh.
+// - Mutations (add/remove/update) call controller methods and then reload the view.
+// Edge cases:
+// - Local vs remote itemId differences are handled by controller; UI uses
+//   itemId when available and falls back to produtoId for local operations.
+
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:go_router/go_router.dart';

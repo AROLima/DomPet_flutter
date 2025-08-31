@@ -1,8 +1,32 @@
+// DIDACTIC: RegisterPage — user registration UI
+//
+// Purpose:
+// - Collect registration data, validate on the client, and call AuthService
+//   to create an account.
+//
+// Contract:
+// - Inputs: form values (name, email, password, etc.).
+// - Outputs: navigation to logged-in state on success and error displays on failure.
+//
+// Notes:
+// - Keep form validation declarative and avoid leaking raw HTTP error shapes
+//   into the UI; map errors to friendly messages.
+
+// Registration page UI.
+// Contract:
+// - Calls `authServiceProvider.register` and navigates to `/` on success.
+// - Cart merge (local -> remote) is handled inside the service after a
+//   successful register/login; the page just triggers navigation.
+// Edge cases:
+// - Keep form validation simple here; business rules belong to the backend.
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../auth_service.dart';
 
+// Registration page. Mirrors the Login UI but calls `authServiceProvider.register`
+// on submit. On success it navigates to the root and merges the local cart.
 class RegisterPage extends ConsumerStatefulWidget {
   const RegisterPage({super.key});
 

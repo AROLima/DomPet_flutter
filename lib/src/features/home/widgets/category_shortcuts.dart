@@ -1,3 +1,24 @@
+// DIDACTIC: CategoryShortcuts — quick category navigation UI
+//
+// Purpose:
+// - Render a row of category shortcuts that update the selected category state
+//   when tapped.
+//
+// Contract:
+// - Inputs: list of category labels and a tap handler.
+// - Outputs: selection callbacks and optional analytics events.
+//
+// Notes:
+// - Keep the widget stateless if possible; manage selection in the parent or
+//   in a provider so it can be preserved across navigation.
+
+// Small UI for category shortcuts used on the home page.
+// Contract:
+// - Fetches categories via `categoriasProvider`; shows sensible defaults while
+//   loading or on error to keep the panel stable.
+// Edge cases:
+// - Icon mapping is heuristic-based and intentionally forgiving for display.
+
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../ui/design_system.dart';
@@ -30,6 +51,8 @@ class CategoryShortcuts extends ConsumerWidget {
           return SizedBox(
             height: 120,
             child: ListView.separated(
+    // While categories load, show a sensible default so the UI remains
+    // stable instead of showing an empty panel.
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 8),
               itemBuilder: (_, i) => _CatCard(

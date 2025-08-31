@@ -1,3 +1,19 @@
+// DIDACTIC: AdminProdutoController — controller for admin product form flows
+
+//
+// Purpose:
+// - Manage create/edit flows inside the admin product form: validation,
+//   mapping UI values to domain models and calling the repository.
+//
+// Contract:
+// - Inputs: form field values and an optional editing id.
+// - Outputs: calls into `AdminProdutosRepository` and reports success/failure
+//   through notifications or returned futures.
+//
+// Notes:
+// - Keep UI-friendly validation here; avoid embedding network calls in
+//   widgets directly. Use this controller to centralize form logic.
+
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'admin_produtos_repository.dart';
 import '../../../src/core/http/problem_detail.dart';

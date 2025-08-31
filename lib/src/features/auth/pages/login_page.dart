@@ -1,8 +1,34 @@
+// DIDACTIC: LoginPage — sign-in UI
+//
+// Purpose:
+// - Authenticate users via AuthService and persist session information.
+//
+// Contract:
+// - Inputs: email/username and password.
+// - Outputs: a persisted session and navigation to home on success.
+// - Error modes: display friendly messages for invalid credentials and map server
+//   ProblemDetail responses to UI hints.
+//
+// Notes:
+// - Avoid long-running blocking operations; show progress indicators and
+//   disable repeated submissions while awaiting response.
+
+// Login page UI.
+// Contract:
+// - Submits credentials to `authServiceProvider.login` and navigates to `/` on
+//   success. Errors are shown via SnackBar.
+// - Uses a local `_loading` flag to prevent duplicate submissions.
+// Edge cases:
+// - Keep navigation decisions outside the service to keep it testable.
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../auth_service.dart';
 
+// Simple login form page. Uses `authServiceProvider` to perform login and
+// navigates to the root on success. UI keeps a local loading flag to disable
+// repeated submits and show a progress indicator.
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
 
@@ -72,7 +98,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   const SizedBox(height: 12),
                   TextButton(
                     onPressed: () => context.go('/register'),
-                    child: const Text('Não tem conta? Cadastre-se'),
+                    child: const Text('N\u00e3o tem conta? Cadastre-se'),
                   ),
                 ],
               ),

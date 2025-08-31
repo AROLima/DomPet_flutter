@@ -1,3 +1,20 @@
+// Cart service layer and controller.
+// DIDACTIC: CartService — operations against the remote cart API
+//
+// Purpose:
+// - Encapsulate network calls for cart operations (get, add, update, remove,
+//   checkout preparation) and translate responses into domain models.
+//
+// Contract:
+// - Inputs: cart delta payloads and cart identifiers.
+// - Outputs: updated `Cart` models and server-validated totals.
+// - Error modes: problems are mapped to ProblemDetail; merge conflicts are
+//   returned in a structured way for UI resolution.
+//
+// Notes:
+// - Keep retry logic minimal; rely on server idempotency and client-side
+//   user feedback for resolution.
+
 import 'package:dio/dio.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../core/http/api_client.dart';
@@ -5,6 +22,9 @@ import '../../core/auth/session.dart';
 import '../../shared/models/cart.dart';
 import 'local_cart.dart';
 
+// Cart service layer. The app supports a local cart (for anonymous users)
+// and a remote cart (for authenticated users). `CartController` orchestrates
+// which implementation to use based on session state.
 final cartServiceProvider = Provider<CartService>((ref) => RemoteCartService(ref));
 // Tick used to notify listeners to refetch cart data after mutations
 final cartRefreshTickProvider = StateProvider<int>((ref) => 0);

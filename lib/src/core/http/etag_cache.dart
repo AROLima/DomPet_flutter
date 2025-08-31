@@ -1,3 +1,16 @@
+// DIDACTIC: ETag cache — persistent small-store for HTTP 304 caching
+// Purpose:
+// - Provide a small persistent cache for HTTP GET responses keyed by path
+//   using ETag values and cached response bodies when a 304 Not Modified
+//   response occurs.
+// Contract:
+// - Data must remain small (SharedPreferences), and keys use request paths.
+// - `getEtag`, `get` and `save` provide the minimal API used by the HTTP
+//   interceptor.
+// Edge cases / Notes:
+// - This cache is in-memory-backed but persisted on writes; it's intentionally
+//   simple for study purposes.
+
 import 'dart:convert';
 
 import 'package:hooks_riverpod/hooks_riverpod.dart';

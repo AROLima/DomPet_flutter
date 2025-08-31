@@ -3,6 +3,20 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'admin_produto_controller.dart';
 import 'widgets/currency_field.dart';
 
+// DIDACTIC: AdminProdutoFormPage — admin UI for creating/editing products
+
+// Purpose:
+// - Provide a form to create or edit product data including price, stock and
+//   description fields.
+//
+// Contract:
+// - Inputs: optional `editarId` to prefill fields when editing.
+// - Outputs: calls controller/repository to persist changes and navigates on success.
+//
+// Notes:
+// - Use `AdminProdutoController` for validation and mapping; keep the page as
+//   a composition of form fields and action buttons.
+
 class AdminProdutoFormPage extends ConsumerStatefulWidget {
   const AdminProdutoFormPage({super.key, this.editarId});
   final int? editarId;

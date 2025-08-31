@@ -1,3 +1,21 @@
+// DIDACTIC: HomeShell — top-level home screen composition
+//
+// Purpose:
+// - Compose the home experience: search, featured carousel, category
+//   shortcuts and several product sections. This widget orchestrates UI
+//   state (search text, suggestions) and delegates data-fetching to
+//   providers/services.
+//
+// Contract:
+// - Inputs: user search input, selected category state.
+// - Outputs: navigation events (push/search) and UI rendering.
+// - Error modes: data fetching errors are handled by child providers and
+//   surfaced as simple placeholders or messages.
+//
+// Implementation note:
+// - Keep heavy async logic in providers/services; use local controllers only
+//   for ephemeral UI state (debounce timers, controllers).
+
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -11,6 +29,9 @@ import 'selected_category.dart';
 import '../products/widgets/horizontal_products.dart';
 import '../../../ui/widgets/responsive_scaffold.dart';
 
+// Home shell combines search, shortcuts, featured carousel and several
+// horizontal product sections. It keeps local search/autocomplete state and
+// pushes navigation events to the product listing page with query params.
 class HomeShell extends ConsumerStatefulWidget {
   const HomeShell({super.key});
   @override

@@ -2,6 +2,20 @@ import 'package:dio/dio.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../src/core/http/api_client.dart';
 
+// DIDACTIC: AdminProdutosRepository — admin API access for product management
+
+// Purpose:
+// - Encapsulate network calls for creating, updating and deleting products
+//   from the admin UI.
+//
+// Contract:
+// - Inputs: product DTOs and optional multipart payloads for images.
+// - Outputs: server-confirmed `Produto` objects and operation results.
+//
+// Notes:
+// - Keep repository methods idempotent where possible and map server errors
+//   to ProblemDetail for the UI to show friendly messages.
+
 final adminProdutosRepositoryProvider = Provider<AdminProdutosRepository>((ref) => AdminProdutosRepository(ref));
 
 class AdminProdutosRepository {

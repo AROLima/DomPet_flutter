@@ -1,3 +1,25 @@
+// DIDACTIC: CheckoutPage — checkout orchestration UI
+//
+// Purpose:
+// - Collect shipping/payment choices and call OrdersService to place an order.
+//
+// Contract:
+// - Inputs: cart state, selected address/payment method.
+// - Outputs: order creation request and navigation to order confirmation.
+// - Error modes: handle validation errors and surface friendly messages.
+//
+// Notes:
+// - Keep sensitive payment logic minimal in the client; delegate to secure
+//   payment providers when possible.
+
+// Checkout page UI and form.
+// Contract:
+// - Collects address fields and posts them to `ordersServiceProvider.checkout`.
+// - On success navigates to the order detail page.
+// Edge cases:
+// - Form validations are minimal; rely on server-side validation and
+//   ProblemDetail for user-friendly errors.
+
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:go_router/go_router.dart';
