@@ -1,3 +1,6 @@
+import 'package:flutter/foundation.dart';
+import 'package:riverpod/riverpod.dart';
+
 // DIDACTIC: Application configuration and environment handling
 //
 // Purpose:
@@ -8,10 +11,11 @@
 // - `AppConfig.fromEnv()` reads compile-time environment variables and
 //   performs host rewrites when running on an Android emulator (localhost -> 10.0.2.2).
 // - `appConfigProvider` exposes the resolved configuration via Riverpod.
-//
+
 // Notes:
 // - Keep environment-specific logic here to avoid scattering platform checks
 //   across the codebase.
+
 class AppConfig {
   AppConfig({required this.baseUrl, required this.flavor});
 
