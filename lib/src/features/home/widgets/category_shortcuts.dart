@@ -30,12 +30,20 @@ class CategoryShortcuts extends ConsumerWidget {
 
   IconData _iconFor(String name) {
     final n = name.toLowerCase();
-    if (n.contains('cachorr')) return Icons.pets;
-    if (n.contains('gato')) return Icons.pets_outlined;
-    if (n.contains('pássar') || n.contains('passar')) return Icons.filter_vintage_outlined;
-    if (n.contains('peixe')) return Icons.water_outlined;
-    if (n.contains('casa') || n.contains('jardim')) return Icons.home_outlined;
-    return Icons.category_outlined;
+  // Material icon mapping for common categories
+  if (n.contains('cachorr') || n.contains('gato') || n.contains('pet')) return Icons.pets_outlined;
+  if (n.contains('pássar') || n.contains('passar')) return Icons.emoji_nature_outlined;
+  if (n.contains('peixe')) return Icons.waves_outlined;
+
+  // Backend category labels mapping (defensive contains checks)
+  if (n.contains('ração') || n.contains('racao')) return Icons.restaurant_outlined;
+  if (n.contains('higien')) return Icons.cleaning_services_outlined;
+  if (n.contains('medic')) return Icons.medical_services_outlined;
+  if (n.contains('acess')) return Icons.shopping_bag_outlined;
+  if (n.contains('brinqu')) return Icons.toys_outlined;
+  if (n.contains('outdoor') || n.contains('passeio') || n.contains('parque')) return Icons.park_outlined;
+
+  return Icons.pets_outlined; // sensible default
   }
 
   @override
@@ -180,25 +188,34 @@ class _CatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final sel = selected;
+    final selectedBg = isDark ? scheme.secondary.withOpacity(0.45) : scheme.secondary.withOpacity(0.12);
+    final selectedFg = isDark ? Colors.white : scheme.onSecondary;
     return Material(
-      color: sel ? scheme.primaryContainer : scheme.surface,
-      borderRadius: BorderRadius.circular(16),
+      color: sel ? selectedBg : scheme.surface,
+      borderRadius: BorderRadius.circular(24),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(24),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Row(
+            // In horizontal lists the width is unbounded; shrink-wrap to avoid
+            // Expanded/Infinity conflicts and let children take only what they need.
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 28, color: sel ? scheme.onPrimaryContainer : null),
+              Icon(icon, size: 24, color: sel ? selectedFg : scheme.onSurface.withOpacity(0.9)),
               const SizedBox(width: 12),
-              Expanded(
+              Flexible(
+                fit: FlexFit.loose,
                 child: Text(
                   title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: sel ? scheme.onPrimaryContainer : null,
-                        fontWeight: sel ? FontWeight.w700 : null,
+                        color: sel ? selectedFg : null,
+                        fontWeight: sel ? FontWeight.w700 : FontWeight.w600,
                       ),
                 ),
               ),

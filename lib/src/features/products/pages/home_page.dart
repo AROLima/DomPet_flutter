@@ -110,36 +110,87 @@ class _HomePageState extends ConsumerState<HomePage> {
         children: [
           const FeaturedCarousel(),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _searchCtrl,
-                  decoration: const InputDecoration(
-                    prefixIcon: Icon(Icons.search),
-                    hintText: 'Buscar produtos',
+          LayoutBuilder(
+            builder: (context, c) {
+              final wide = c.maxWidth >= 720;
+              if (wide) {
+                return Row(children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _searchCtrl,
+                      decoration: const InputDecoration(
+                        prefixIcon: Icon(Icons.search),
+                        hintText: 'O que seu pet precisa?',
+                        isDense: false,
+                      ),
+                      onSubmitted: (_) => setState(() => _page = 0),
+                    ),
                   ),
-                  onSubmitted: (_) => setState(() => _page = 0),
-                ),
-              ),
-              const SizedBox(width: 8),
-              catsAsync.when(
-                data: (cats) => DropdownButton<String?>(
-                  value: _categoria,
-                  hint: const Text('Categoria'),
-                  items: [
-                    const DropdownMenuItem<String?>(value: null, child: Text('Todas')),
-                    ...cats.map((c) => DropdownMenuItem<String?>(value: c, child: Text(c))),
-                  ],
-                  onChanged: (v) => setState(() {
-                    _categoria = v;
-                    _page = 0;
-                  }),
-                ),
-                loading: () => const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2)),
-                error: (e, st) => const Icon(Icons.error_outline),
-              ),
-            ],
+                  const SizedBox(width: 12),
+                  SizedBox(
+                    width: 220,
+                    child: catsAsync.when(
+                      data: (cats) => DropdownButtonFormField<String?>(
+                        isExpanded: true,
+                        value: _categoria,
+                        decoration: const InputDecoration(
+                          isDense: true,
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          prefixIcon: Icon(Icons.category_outlined),
+                          labelText: 'Categoria',
+                        ),
+                        items: [
+                          const DropdownMenuItem<String?>(value: null, child: Text('Todas')),
+                          ...cats.map((c) => DropdownMenuItem<String?>(value: c, child: Text(c))),
+                        ],
+                        onChanged: (v) => setState(() {
+                          _categoria = v;
+                          _page = 0;
+                        }),
+                      ),
+                      loading: () => const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2)),
+                      error: (e, st) => const Icon(Icons.error_outline),
+                    ),
+                  ),
+                ]);
+              }
+              // Narrow: stack vertically
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  TextField(
+                    controller: _searchCtrl,
+                    decoration: const InputDecoration(
+                      prefixIcon: Icon(Icons.search),
+                      hintText: 'O que seu pet precisa?',
+                    ),
+                    onSubmitted: (_) => setState(() => _page = 0),
+                  ),
+                  const SizedBox(height: 8),
+                  catsAsync.when(
+                    data: (cats) => DropdownButtonFormField<String?>(
+                      isExpanded: true,
+                      value: _categoria,
+                      decoration: const InputDecoration(
+                        isDense: true,
+                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        hintText: 'Categoria',
+                      ),
+                      items: [
+                        const DropdownMenuItem<String?>(value: null, child: Text('Todas')),
+                        ...cats.map((c) => DropdownMenuItem<String?>(value: c, child: Text(c))),
+                      ],
+                      onChanged: (v) => setState(() {
+                        _categoria = v;
+                        _page = 0;
+                      }),
+                    ),
+                    loading: () => const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2)),
+                    error: (e, st) => const Icon(Icons.error_outline),
+                  ),
+                ],
+              );
+            },
           ),
           const SizedBox(height: 12),
           Expanded(
@@ -149,14 +200,18 @@ class _HomePageState extends ConsumerState<HomePage> {
                   children: [
                     Expanded(
                       child: GridView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: gridColsFor(constraints.maxWidth),
+                          // Be more conservative on small widths: use 2 cols below ~720px
+                          crossAxisCount: constraints.maxWidth < 720
+                              ? 2
+                              : gridColsFor(constraints.maxWidth),
                           mainAxisSpacing: 12,
                           crossAxisSpacing: 12,
               childAspectRatio: (constraints.maxWidth < AppBreakpoints.xs)
-                ? 0.56
+                ? 0.60
                 : (constraints.maxWidth < AppBreakpoints.md)
-                  ? 0.66
+                  ? 0.70
                   : 0.82,
                         ),
                         itemCount: page.content.length,
@@ -209,7 +264,9 @@ class _ProductCardState extends ConsumerState<_ProductCard> {
   Widget build(BuildContext context) {
     final produto = widget.produto;
     return Card(
-      clipBehavior: Clip.antiAlias,
+  clipBehavior: Clip.antiAlias,
+  // Remove default theme margin to avoid grid clipping on narrow screens.
+  margin: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.all(8.0),
         child: Column(
@@ -218,13 +275,22 @@ class _ProductCardState extends ConsumerState<_ProductCard> {
             AspectRatio(
               aspectRatio: 4 / 3,
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(12),
                 child: produto.imagemUrl != null
                     ? Image.network(
                         produto.imagemUrl!,
                         fit: BoxFit.cover,
+                        errorBuilder: (context, error, stack) => Container(
+                          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                          alignment: Alignment.center,
+                          child: const Icon(Icons.pets),
+                        ),
                       )
-                    : Container(color: Theme.of(context).colorScheme.surfaceContainerHighest),
+                    : Container(
+                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                        alignment: Alignment.center,
+                        child: const Icon(Icons.pets),
+                      ),
               ),
             ),
             const SizedBox(height: 8),
@@ -235,7 +301,7 @@ class _ProductCardState extends ConsumerState<_ProductCard> {
               style: widget.isWide ? Theme.of(context).textTheme.titleLarge : Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 4),
-            Text('R\$ ${produto.preco.toStringAsFixed(2)}'),
+            Text(formatBrl(produto.preco)),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
@@ -269,7 +335,14 @@ class _ProductCardState extends ConsumerState<_ProductCard> {
                         : null,
                     child: _loading
                         ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                        : const Text('Adicionar'),
+                        : Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: const [
+                              Icon(Icons.pets, size: 18),
+                              SizedBox(width: 6),
+                              Text('Adicionar'),
+                            ],
+                          ),
                   ),
                 ),
                 ConstrainedBox(

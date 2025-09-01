@@ -81,8 +81,14 @@ class _Body extends ConsumerWidget {
             Row(
               children: [
                 prod.imagemUrl != null
-                    ? Image.network(prod.imagemUrl!, width: 72, height: 72, fit: BoxFit.cover)
-                    : const Icon(Icons.image_not_supported, size: 48),
+                    ? Image.network(
+                        prod.imagemUrl!,
+                        width: 72,
+                        height: 72,
+                        fit: BoxFit.cover,
+            errorBuilder: (context, error, stack) => const Icon(Icons.pets, size: 48),
+                      )
+          : const Icon(Icons.pets, size: 48),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

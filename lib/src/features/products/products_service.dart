@@ -107,23 +107,30 @@ final categoriasProvider = FutureProvider.autoDispose<List<String>>((ref) => ref
 
 @immutable
 class ProductsQuery {
-  const ProductsQuery({this.nome, this.categoria, this.page = 0, this.size = 20});
+  const ProductsQuery({this.nome, this.categoria, this.page = 0, this.size = 20, this.sort});
   final String? nome;
   final String? categoria;
   final int page;
   final int size;
+  final String? sort; // e.g. 'nome,asc' | 'preco,desc'
 
-  ProductsQuery copyWith({String? nome, String? categoria, int? page, int? size}) =>
-      ProductsQuery(nome: nome ?? this.nome, categoria: categoria ?? this.categoria, page: page ?? this.page, size: size ?? this.size);
+  ProductsQuery copyWith({String? nome, String? categoria, int? page, int? size, String? sort}) =>
+      ProductsQuery(
+        nome: nome ?? this.nome,
+        categoria: categoria ?? this.categoria,
+        page: page ?? this.page,
+        size: size ?? this.size,
+        sort: sort ?? this.sort,
+      );
 
   @override
-  bool operator ==(Object other) => other is ProductsQuery && other.nome == nome && other.categoria == categoria && other.page == page && other.size == size;
+  bool operator ==(Object other) => other is ProductsQuery && other.nome == nome && other.categoria == categoria && other.page == page && other.size == size && other.sort == sort;
   @override
-  int get hashCode => Object.hash(nome, categoria, page, size);
+  int get hashCode => Object.hash(nome, categoria, page, size, sort);
 }
 
 final productsSearchProvider = FutureProvider.autoDispose.family<PageResult<Produto>, ProductsQuery>((ref, q) async {
-  return ref.read(productsServiceProvider).search(nome: q.nome, categoria: q.categoria, page: q.page, size: q.size);
+  return ref.read(productsServiceProvider).search(nome: q.nome, categoria: q.categoria, page: q.page, size: q.size, sort: q.sort);
 });
 
 final productDetailProvider = FutureProvider.autoDispose.family<ProdutoDetalhe, int>((ref, id) => ref.read(productsServiceProvider).getDetail(id));

@@ -9,6 +9,8 @@ import '../../../src/shared/models/page_result.dart';
 import '../../../src/shared/models/product.dart';
 import 'admin_produto_controller.dart';
 import '../widgets/admin_drawer.dart';
+import '../../../ui/design_system.dart';
+import '../../../ui/widgets/responsive_scaffold.dart';
 
 // AdminProdutosPage — responsive list with edit/delete actions
 // - Uses productsSearchProvider for data, keeps admin-only actions.
@@ -25,6 +27,8 @@ class _AdminProdutosPageState extends ConsumerState<AdminProdutosPage> {
   final _qCtrl = TextEditingController();
   String? _categoria;
   int _page = 0;
+  int? _sortColumnIndex; // 1=Nome, 2=Preço, 3=Estoque
+  bool _sortAsc = true;
   Timer? _debouncer;
   bool _deleteSnackHandled = false;
 
@@ -70,85 +74,135 @@ class _AdminProdutosPageState extends ConsumerState<AdminProdutosPage> {
 
   @override
   Widget build(BuildContext context) {
-    final q = ProductsQuery(nome: _qCtrl.text, categoria: _categoria, page: _page, size: 20);
+  // Map column index to backend sort field
+  String? sortField;
+  if (_sortColumnIndex == 1) sortField = 'nome';
+  if (_sortColumnIndex == 2) sortField = 'preco';
+  if (_sortColumnIndex == 3) sortField = 'estoque';
+  final sortParam = sortField != null ? '$sortField,${_sortAsc ? 'asc' : 'desc'}' : null;
+  final q = ProductsQuery(nome: _qCtrl.text, categoria: _categoria, page: _page, size: 20, sort: sortParam);
     final pageAsync = ref.watch(productsSearchProvider(q));
     final catsAsync = ref.watch(categoriasProvider);
     final controller = ref.watch(adminProdutoControllerProvider);
 
   // Snackbar handling is done once in initState.
 
-    return Scaffold(
-  appBar: AppBar(
-        leading: IconButton(
-          tooltip: 'Início',
-          icon: const Icon(Icons.home_outlined),
-          onPressed: () => context.go('/'),
-        ),
-        title: const Text('Admin · Produtos'),
-      ),
-  drawer: const AdminDrawer(),
-      floatingActionButton: FloatingActionButton.extended(
+    return ResponsiveScaffold(
+      title: const Text('Admin · Produtos'),
+      drawer: const AdminDrawer(),
+      fab: FloatingActionButton.extended(
         onPressed: () => context.push('/admin/produtos/novo'),
         icon: const Icon(Icons.add),
         label: const Text('Novo'),
-      ),
-      // Move the paginator to a bottom bar so it won't be covered by the FAB
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-          child: pageAsync.when(
-            data: (p) => _Paginator(
-              page: p,
-              onPrev: _page > 0 ? () => setState(() => _page -= 1) : null,
-              onNext: !p.last ? () => setState(() => _page += 1) : null,
-            ),
-            loading: () => const SizedBox.shrink(),
-            error: (_, __) => const SizedBox.shrink(),
-          ),
-        ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            Row(children: [
-              Expanded(
-                child: TextField(
-                  controller: _qCtrl,
-                  decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'Buscar por nome'),
-                  onSubmitted: (_) => setState(() => _page = 0),
-                ),
-              ),
-              const SizedBox(width: 8),
-              catsAsync.when(
-                data: (cats) => DropdownButton<String?>(
-                  value: _categoria,
-                  hint: const Text('Categoria'),
-                  items: [
-                    const DropdownMenuItem<String?>(value: null, child: Text('Todas')),
-                    ...cats.map((c) => DropdownMenuItem<String?>(value: c, child: Text(c))),
+            LayoutBuilder(
+              builder: (context, c) {
+                final wide = c.maxWidth >= AppBreakpoints.sm;
+                if (wide) {
+                  return Row(children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _qCtrl,
+                        decoration: const InputDecoration(
+                          prefixIcon: Icon(Icons.search),
+                          hintText: 'Buscar por nome',
+                        ),
+                        onSubmitted: (_) => setState(() => _page = 0),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    SizedBox(
+                      width: 220,
+                      child: catsAsync.when(
+                        data: (cats) => DropdownButtonFormField<String?>(
+                          isExpanded: true,
+                          value: _categoria,
+                          decoration: const InputDecoration(
+                            isDense: true,
+                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            prefixIcon: Icon(Icons.category_outlined),
+                            labelText: 'Categoria',
+                          ),
+                          items: [
+                            const DropdownMenuItem<String?>(value: null, child: Text('Todas')),
+                            ...cats.map((c) => DropdownMenuItem<String?>(value: c, child: Text(c))),
+                          ],
+                          onChanged: (v) => setState(() {
+                            _categoria = v;
+                            _page = 0;
+                          }),
+                        ),
+                        loading: () => const SizedBox(height: 24, child: LinearProgressIndicator(minHeight: 4)),
+                        error: (e, _) => const SizedBox.shrink(),
+                      ),
+                    ),
+                  ]);
+                }
+                // Narrow: stack vertically to avoid overflow
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    TextField(
+                      controller: _qCtrl,
+                      decoration: const InputDecoration(
+                        prefixIcon: Icon(Icons.search),
+                        hintText: 'Buscar por nome',
+                      ),
+                      onSubmitted: (_) => setState(() => _page = 0),
+                    ),
+                    const SizedBox(height: 8),
+                    catsAsync.when(
+                      data: (cats) => DropdownButtonFormField<String?>(
+                        isExpanded: true,
+                        value: _categoria,
+                        decoration: const InputDecoration(
+                          isDense: true,
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          hintText: 'Categoria',
+                        ),
+                        items: [
+                          const DropdownMenuItem<String?>(value: null, child: Text('Todas')),
+                          ...cats.map((c) => DropdownMenuItem<String?>(value: c, child: Text(c))),
+                        ],
+                        onChanged: (v) => setState(() {
+                          _categoria = v;
+                          _page = 0;
+                        }),
+                      ),
+                      loading: () => const SizedBox(height: 24, child: LinearProgressIndicator(minHeight: 4)),
+                      error: (e, _) => const SizedBox.shrink(),
+                    ),
                   ],
-                  onChanged: (v) => setState(() {
-                    _categoria = v;
-                    _page = 0;
-                  }),
-                ),
-                loading: () => const SizedBox(width: 160, height: 24, child: LinearProgressIndicator()),
-                error: (e, _) => const SizedBox(),
-              ),
-            ]),
-            const SizedBox(height: 12),
+                );
+              },
+            ),
+            const SizedBox(height: 16),
             Expanded(
               child: pageAsync.when(
                 data: (page) => LayoutBuilder(
                   builder: (context, c) {
-                    final wide = c.maxWidth >= 900;
+                    final wide = c.maxWidth >= AppBreakpoints.sm;
                     return wide ? _TableView(page: page, deletingId: controller.deletingId) : _CardsView(page: page, deletingId: controller.deletingId);
                   },
                 ),
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (e, st) => Center(child: Text('Erro ao carregar: $e')),
               ),
+            ),
+            const SizedBox(height: 8),
+            // Paginator inside body so it stays visible across breakpoints
+            pageAsync.when(
+              data: (p) => _Paginator(
+                page: p,
+                onPrev: _page > 0 ? () => setState(() => _page -= 1) : null,
+                onNext: !p.last ? () => setState(() => _page += 1) : null,
+              ),
+              loading: () => const SizedBox.shrink(),
+              error: (_, __) => const SizedBox.shrink(),
             ),
           ],
         ),
@@ -193,13 +247,71 @@ class _TableView extends ConsumerWidget {
   final int? deletingId;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final rows = page.content.map((p) => DataRow(cells: [
-          DataCell(p.imagemUrl != null ? Image.network(p.imagemUrl!, width: 56, height: 56, fit: BoxFit.cover) : const Icon(Icons.image_not_supported)),
-          DataCell(Text(p.nome)),
-          DataCell(Text('R\$ ${p.preco.toStringAsFixed(2)}')),
-          DataCell(Text(p.estoque.toString())),
-          DataCell(_RowActions(produto: p, deleting: deletingId == p.id)),
-        ])).toList();
+    final scheme = Theme.of(context).colorScheme;
+    final rows = <DataRow>[];
+    for (var i = 0; i < page.content.length; i++) {
+      final p = page.content[i];
+      final bg = i.isEven ? scheme.surfaceContainerHighest.withOpacity(0.06) : Colors.transparent;
+      rows.add(
+        DataRow(
+          color: MaterialStatePropertyAll<Color>(bg),
+          cells: [
+            DataCell(
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: p.imagemUrl != null
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: Image.network(
+                          p.imagemUrl!,
+                          width: 60,
+                          height: 60,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stack) => const Icon(Icons.pets),
+                        ),
+                      )
+                    : const Icon(Icons.pets),
+              ),
+            ),
+            DataCell(
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Text(p.nome, overflow: TextOverflow.ellipsis),
+              ),
+            ),
+            DataCell(
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Align(alignment: Alignment.centerRight, child: Text(formatBrl(p.preco))),
+              ),
+            ),
+            DataCell(
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: Chip(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                    label: Text(p.estoque.toString()),
+                    backgroundColor: p.estoque > 0 ? scheme.secondaryContainer : scheme.errorContainer,
+                    labelStyle: TextStyle(
+                      color: p.estoque > 0 ? scheme.onSecondaryContainer : scheme.onErrorContainer,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            DataCell(
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: _RowActions(produto: p, deleting: deletingId == p.id),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
     // Make the table scrollable in both directions
     return Scrollbar(
@@ -209,12 +321,51 @@ class _TableView extends ConsumerWidget {
           constraints: const BoxConstraints(minWidth: 800),
           child: SingleChildScrollView(
             child: DataTable(
-              columns: const [
-                DataColumn(label: Text('Imagem')),
-                DataColumn(label: Text('Nome')),
-                DataColumn(label: Text('Preço')),
-                DataColumn(label: Text('Estoque')),
-                DataColumn(label: Text('Ações')),
+              headingRowHeight: 48,
+              dataRowMinHeight: 56,
+              dataRowMaxHeight: 68,
+              columnSpacing: 32,
+              headingTextStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+              sortColumnIndex: context.findAncestorStateOfType<_AdminProdutosPageState>()?._sortColumnIndex,
+              sortAscending: context.findAncestorStateOfType<_AdminProdutosPageState>()?._sortAsc ?? true,
+              columns: [
+                const DataColumn(label: Text('Imagem')),
+                DataColumn(
+                  label: const Text('Nome'),
+                  onSort: (i, asc) {
+                    final s = context.findAncestorStateOfType<_AdminProdutosPageState>();
+                    s?.setState(() {
+                      s._sortColumnIndex = i;
+                      s._sortAsc = asc;
+                      s._page = 0;
+                    });
+                  },
+                ),
+                DataColumn(
+                  numeric: true,
+                  label: const Text('Preço'),
+                  onSort: (i, asc) {
+                    final s = context.findAncestorStateOfType<_AdminProdutosPageState>();
+                    s?.setState(() {
+                      s._sortColumnIndex = i;
+                      s._sortAsc = asc;
+                      s._page = 0;
+                    });
+                  },
+                ),
+                DataColumn(
+                  numeric: true,
+                  label: const Text('Estoque'),
+                  onSort: (i, asc) {
+                    final s = context.findAncestorStateOfType<_AdminProdutosPageState>();
+                    s?.setState(() {
+                      s._sortColumnIndex = i;
+                      s._sortAsc = asc;
+                      s._page = 0;
+                    });
+                  },
+                ),
+                const DataColumn(label: Text('Ações')),
               ],
               rows: rows,
             ),
@@ -231,27 +382,45 @@ class _CardsView extends ConsumerWidget {
   final int? deletingId;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+  final scheme = Theme.of(context).colorScheme;
   return ListView.separated(
       itemCount: page.content.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (context, i) {
         final p = page.content[i];
         return Card(
           child: Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
                 if (p.imagemUrl != null)
-                  Image.network(p.imagemUrl!, width: 56, height: 56, fit: BoxFit.cover)
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: Image.network(
+                      p.imagemUrl!,
+                      width: 60,
+                      height: 60,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stack) => const Icon(Icons.pets),
+                    ),
+                  )
                 else
-                  const Icon(Icons.image_not_supported),
-                const SizedBox(width: 12),
+                  const Icon(Icons.pets),
+                const SizedBox(width: 14),
                 Expanded(child: Text(p.nome, style: Theme.of(context).textTheme.titleMedium)),
-                Text('R\$ ${p.preco.toStringAsFixed(2)}'),
+                Text(formatBrl(p.preco), style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
               ]),
-              const SizedBox(height: 8),
+              const SizedBox(height: 10),
               Row(children: [
-                Text('Estoque: ${p.estoque}'),
+                Chip(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                  label: Text('Estoque: ${p.estoque}'),
+                  backgroundColor: p.estoque > 0 ? scheme.secondaryContainer : scheme.errorContainer,
+                  labelStyle: TextStyle(
+                    color: p.estoque > 0 ? scheme.onSecondaryContainer : scheme.onErrorContainer,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
                 const Spacer(),
                 _RowActions(produto: p, deleting: deletingId == p.id),
               ])
@@ -284,7 +453,7 @@ class _RowActions extends ConsumerWidget {
             ),
           ),
         ),
-        const SizedBox(width: 4),
+  const SizedBox(width: 10),
         Tooltip(
           message: 'Excluir',
           child: Semantics(

@@ -172,7 +172,6 @@ Você pode criar tasks no VS Code para:
 - Evite dependências de rede em testes de widget; injete providers/mocks
 
 ---
-Feito com Flutter ❤️ para a DomPet. Se precisar, abra um issue ou peça por novas seções neste README.
 # DomPet App (Flutter)
 
 App mobile Flutter (3.22+/Dart 3.4+) para consumir a API DomPet.

@@ -109,13 +109,6 @@ class _HomeShellState extends ConsumerState<HomeShell> {
                 onSubmit: (q) => context.push('/produtos?q=${Uri.encodeComponent(q)}'),
               ),
               const SizedBox(height: 24),
-              CategoryShortcuts(
-                selected: selectedCat,
-                onChanged: (cat) {
-                  ref.read(selectedCategoryProvider.notifier).state = cat;
-                },
-              ),
-              const SizedBox(height: 24),
               if (selectedCat != null)
                 Padding(
                   padding: const EdgeInsets.only(left: 8, bottom: 8),
@@ -125,12 +118,31 @@ class _HomeShellState extends ConsumerState<HomeShell> {
                     children: [
                       Text('Filtrando por', style: Theme.of(context).textTheme.labelLarge),
                       Chip(
-                        label: Text(selectedCat),
+                        label: Text(
+                          selectedCat,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSecondaryContainer,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
                         onDeleted: () => ref.read(selectedCategoryProvider.notifier).state = null,
+                        deleteIcon: const Icon(Icons.close),
+                        deleteIconColor: Theme.of(context).colorScheme.onSecondaryContainer,
+                        side: BorderSide(color: Theme.of(context).colorScheme.outline.withOpacity(0.3)),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
                       ),
                     ],
                   ),
                 ),
+              const SizedBox(height: 8),
+              CategoryShortcuts(
+                selected: selectedCat,
+                onChanged: (cat) {
+                  ref.read(selectedCategoryProvider.notifier).state = cat;
+                },
+              ),
+              const SizedBox(height: 24),
               FeaturedCarousel(category: selectedCat),
               const SizedBox(height: 24),
               // Use supported sort field; 'vendidos' doesn't exist on backend entity

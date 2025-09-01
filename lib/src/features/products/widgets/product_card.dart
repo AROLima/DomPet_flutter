@@ -19,6 +19,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../cart/cart_service.dart';
 import '../../cart/local_cart.dart' show MergeConflict;
 import '../../../shared/models/product.dart';
+import '../../../../ui/design_system.dart';
 
 // Reusable product card used across home / lists.
 // Accessibility: uses InkWell + FocusTraversalGroup to keep keyboard and
@@ -48,6 +49,7 @@ class _ProductCardState extends ConsumerState<ProductCard> {
         focusColor: Theme.of(context).colorScheme.primary.withOpacity(0.08),
         hoverColor: Theme.of(context).colorScheme.primary.withOpacity(0.04),
         child: Card(
+          margin: EdgeInsets.zero,
           clipBehavior: Clip.antiAlias,
           child: Padding(
             padding: const EdgeInsets.all(8),
@@ -61,8 +63,20 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(12),
                     child: p.imagemUrl != null
-                        ? Image.network(p.imagemUrl!, fit: BoxFit.cover)
-                        : Container(color: Theme.of(context).colorScheme.surfaceContainerHighest),
+                        ? Image.network(
+                            p.imagemUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stack) => Container(
+                              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                              alignment: Alignment.center,
+                              child: const Icon(Icons.pets),
+                            ),
+                          )
+                        : Container(
+                            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                            alignment: Alignment.center,
+                            child: const Icon(Icons.pets),
+                          ),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -73,7 +87,7 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 4),
-                Text('R\$ ${p.preco.toStringAsFixed(2)}', style: Theme.of(context).textTheme.titleMedium),
+                Text(formatBrl(p.preco), style: Theme.of(context).textTheme.titleMedium),
                 const Spacer(),
                 if (tight)
                   Row(

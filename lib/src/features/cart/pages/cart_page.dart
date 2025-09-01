@@ -25,6 +25,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../shared/models/cart.dart';
 import '../../cart/cart_service.dart';
+import '../../products/products_service.dart';
 
 class CartPage extends ConsumerStatefulWidget {
   const CartPage({super.key});
@@ -111,16 +112,59 @@ class _CartPageState extends ConsumerState<CartPage> {
             child: ListView(
               padding: const EdgeInsets.all(12),
               children: [
-                ...cart.itens.map((item) => Card(
+                ...cart.itens.map((item) {
+                  final detail = ref.watch(productDetailProvider(item.produtoId));
+                  return Card(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       child: ListTile(
-                        title: Text(item.nome),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        onTap: () => context.push('/produto/${item.produtoId}'),
+                        leading: SizedBox(
+                          width: 40,
+                          height: 40,
+                          child: ClipOval(
+                            child: detail.when(
+                              data: (p) {
+                                final url = p.imagemUrl;
+                                if (url != null && url.isNotEmpty) {
+                                  return Image.network(
+                                    url,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stack) => Container(
+                                      color: Theme.of(context).colorScheme.secondaryContainer,
+                                      alignment: Alignment.center,
+                                      child: const Icon(Icons.pets, color: Colors.white),
+                                    ),
+                                  );
+                                }
+                                return Container(
+                                  color: Theme.of(context).colorScheme.secondaryContainer,
+                                  alignment: Alignment.center,
+                                  child: const Icon(Icons.pets, color: Colors.white),
+                                );
+                              },
+                              loading: () => Container(
+                                color: Theme.of(context).colorScheme.secondaryContainer,
+                                alignment: Alignment.center,
+                                child: const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                              ),
+                              error: (e, _) => Container(
+                                color: Theme.of(context).colorScheme.secondaryContainer,
+                                alignment: Alignment.center,
+                                child: const Icon(Icons.pets, color: Colors.white),
+                              ),
+                            ),
+                          ),
+                        ),
+                        title: Text(item.nome, maxLines: 2, overflow: TextOverflow.ellipsis),
                         subtitle: Text('R\$ ' + item.precoUnitario.toStringAsFixed(2)),
-                        trailing: SizedBox(
-                          width: 160,
+                        trailing: ConstrainedBox(
+                          constraints: const BoxConstraints(minWidth: 168, maxWidth: 196),
                           child: Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              IconButton(
+                              IconButton.filledTonal(
+                                visualDensity: VisualDensity.compact,
                                 icon: const Icon(Icons.remove),
                                 onPressed: () async {
                                   final q = item.quantidade - 1;
@@ -139,8 +183,12 @@ class _CartPageState extends ConsumerState<CartPage> {
                                   await _reload();
                                 },
                               ),
-                              Text('${item.quantidade}'),
-                              IconButton(
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 8),
+                                child: Text('${item.quantidade}', style: Theme.of(context).textTheme.titleMedium),
+                              ),
+                              IconButton.filledTonal(
+                                visualDensity: VisualDensity.compact,
                                 icon: const Icon(Icons.add),
                                 onPressed: () async {
                                   final q = item.quantidade + 1;
@@ -154,39 +202,44 @@ class _CartPageState extends ConsumerState<CartPage> {
                                   await _reload();
                                 },
                               ),
-                              IconButton(
-                                icon: const Icon(Icons.delete_outline),
-                                onPressed: () async {
-                                  await ref.read(cartControllerProvider).remove(
-                                      produtoId: item.produtoId, itemId: item.itemId >= 0 ? item.itemId : null);
-                                  await _reload();
-                                },
+                              const SizedBox(width: 4),
+                              Tooltip(
+                                message: 'Remover',
+                                child: IconButton(
+                                  visualDensity: VisualDensity.compact,
+                                  icon: const Icon(Icons.delete_outline),
+                                  onPressed: () async {
+                                    await ref.read(cartControllerProvider).remove(
+                                        produtoId: item.produtoId, itemId: item.itemId >= 0 ? item.itemId : null);
+                                    await _reload();
+                                  },
+                                ),
                               ),
                             ],
                           ),
                         ),
                       ),
-                    )),
+                    );
+                }),
                 const SizedBox(height: 12),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Total:', style: Theme.of(context).textTheme.titleMedium),
-                    Text('R\$ ' + cart.total.toStringAsFixed(2), style: Theme.of(context).textTheme.titleLarge),
+                    Text('Total', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+                    Text('R\$ ' + cart.total.toStringAsFixed(2), style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
                   ],
                 ),
                 const SizedBox(height: 12),
-                FilledButton(
-                  onPressed: () => context.push('/checkout'),
-                  child: const Text('Ir para checkout'),
+                Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(minWidth: 200, maxWidth: 420),
+                    child: FilledButton(
+                      onPressed: () => context.push('/checkout'),
+                      child: const Text('Ir para checkout'),
+                    ),
+                  ),
                 ),
-                TextButton(
-                  onPressed: () async {
-                    await ref.read(cartControllerProvider).clear();
-                    await _reload();
-                  },
-                  child: const Text('Limpar carrinho'),
-                ),
+                const SizedBox(height: 8),
               ],
             ),
           );

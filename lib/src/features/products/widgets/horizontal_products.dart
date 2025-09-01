@@ -74,10 +74,10 @@ class _Body extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final w = MediaQuery.of(context).size.width;
-    final cols = gridColsFor(w);
-    if (cols <= 3) {
-      // Horizontal list for mobile
+    return LayoutBuilder(builder: (context, constraints) {
+      final w = constraints.maxWidth;
+  final cols = w < 720 ? 2 : gridColsFor(w);
+  // Grid for all widths (2 cols on narrow screens)
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -86,52 +86,27 @@ class _Body extends StatelessWidget {
             child: Text(title, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
           ),
           const SizedBox(height: 8),
-          SizedBox(
-            height: 310,
-            child: ListView.separated(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              scrollDirection: Axis.horizontal,
-        itemBuilder: (c, i) => SizedBox(
-                width: 220,
-                child: ProductCard(
-                  product: items[i],
-          onView: () => c.push('/produto/${items[i].id}'),
-                ),
-              ),
-              separatorBuilder: (_, __) => const SizedBox(width: 12),
-              itemCount: items.length,
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+    padding: const EdgeInsets.symmetric(horizontal: 8),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+      crossAxisCount: cols, // at small widths this resolves to 2
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+      childAspectRatio: w < 360
+      ? 0.62
+      : (w < 600 ? 0.70 : 0.75),
+            ),
+            itemCount: items.length,
+            itemBuilder: (c, i) => ProductCard(
+              product: items[i],
+              onView: () => c.push('/produto/${items[i].id}'),
             ),
           ),
         ],
       );
-    }
-
-    // Grid for md+
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-          child: Text(title, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
-        ),
-        const SizedBox(height: 8),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: cols,
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: 3 / 4,
-          ),
-          itemCount: items.length,
-          itemBuilder: (c, i) => ProductCard(
-            product: items[i],
-            onView: () => c.push('/produto/${items[i].id}'),
-          ),
-        ),
-      ],
-    );
+    });
   }
 }
 
@@ -140,24 +115,26 @@ class _Skeleton extends StatelessWidget {
   final String title;
   @override
   Widget build(BuildContext context) {
-    final w = MediaQuery.of(context).size.width;
-    final cols = gridColsFor(w);
-    final count = cols <= 3 ? 6 : cols * 2;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-          child: Text(title, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: List.generate(count, (i) => _Box()),
-        )
-      ],
-    );
+    return LayoutBuilder(builder: (context, constraints) {
+      final w = constraints.maxWidth;
+      final cols = gridColsFor(w);
+      final count = cols <= 2 ? 6 : cols * 2;
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: Text(title, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: List.generate(count, (i) => _Box()),
+          )
+        ],
+      );
+    });
   }
 }
 

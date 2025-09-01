@@ -53,93 +53,196 @@ class ProductDetailPage extends ConsumerWidget {
   }
 }
 
-class _Detail extends ConsumerWidget {
+class _Detail extends ConsumerStatefulWidget {
   const _Detail({required this.p});
   final ProdutoDetalhe p;
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_Detail> createState() => _DetailState();
+}
+
+class _DetailState extends ConsumerState<_Detail> {
+  int _qty = 1;
+  bool _adding = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = widget.p;
     return LayoutBuilder(builder: (context, constraints) {
       final isWide = constraints.maxWidth >= AppBreakpoints.md;
-      final image = Container(
-        constraints: const BoxConstraints(maxHeight: 600),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceVariant,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Center(
-          child: AspectRatio(
-            aspectRatio: isWide ? 16 / 9 : 4 / 3,
-            child: p.imagemUrl != null
-                ? Image.network(p.imagemUrl!, fit: BoxFit.contain, gaplessPlayback: true)
-                : const Icon(Icons.pets, size: 64),
+      final scheme = Theme.of(context).colorScheme;
+      final isDark = Theme.of(context).brightness == Brightness.dark;
+
+      // Product image
+      final image = Semantics(
+        label: 'Imagem do produto ${p.nome}',
+        child: Card(
+          elevation: 1,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          clipBehavior: Clip.antiAlias,
+          child: Container(
+            color: Theme.of(context).colorScheme.surface,
+            constraints: const BoxConstraints(maxHeight: 420),
+            child: Center(
+              child: AspectRatio(
+                aspectRatio: isWide ? 1 : 4 / 3,
+                child: p.imagemUrl != null
+                    ? Image.network(
+                        p.imagemUrl!,
+                        fit: BoxFit.contain,
+                        alignment: Alignment.center,
+                        errorBuilder: (context, error, stack) => Container(
+                          color: scheme.surfaceContainerHighest,
+                          alignment: Alignment.center,
+                          child: const Icon(Icons.pets, size: 72),
+                        ),
+                      )
+                    : Container(
+                        color: scheme.surfaceContainerHighest,
+                        alignment: Alignment.center,
+                        child: const Icon(Icons.pets, size: 72),
+                      ),
+              ),
+            ),
           ),
         ),
       );
 
+      // Quantity stepper
+      Widget qtyStepper() {
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton.filledTonal(
+              tooltip: 'Diminuir',
+              onPressed: _qty > 1 ? () => setState(() => _qty -= 1) : null,
+              icon: const Icon(Icons.remove),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Text('$_qty', style: Theme.of(context).textTheme.titleMedium),
+            ),
+            IconButton.filledTonal(
+              tooltip: 'Aumentar',
+              onPressed: () => setState(() => _qty += 1),
+              icon: const Icon(Icons.add),
+            ),
+          ],
+        );
+      }
+
+      // Info column
       final info = Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(p.nome, style: Theme.of(context).textTheme.titleLarge),
+          Text(p.nome, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
           const SizedBox(height: 6),
-          Text('R\$ ${p.preco.toStringAsFixed(2)}', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          if (p.descricao != null) Text(p.descricao!),
-          const SizedBox(height: 16),
           Row(
-            mainAxisSize: MainAxisSize.min,
             children: [
+              Text(
+                formatBrl(p.preco),
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(width: 12),
+              Chip(
+                label: Text(p.estoque > 0 ? 'Em estoque' : 'Indisponível'),
+                labelStyle: TextStyle(
+                  color: p.estoque > 0 ? (isDark ? Colors.white : scheme.onSecondary) : (isDark ? scheme.onErrorContainer : scheme.onSurface),
+                  fontWeight: FontWeight.w700,
+                ),
+                avatar: Icon(
+                  p.estoque > 0 ? Icons.check_circle : Icons.schedule,
+                  color: p.estoque > 0 ? (isDark ? Colors.white : scheme.onSecondary) : (isDark ? scheme.onErrorContainer : scheme.onSurface),
+                ),
+                side: BorderSide(color: scheme.outline.withOpacity(0.4)),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                backgroundColor: p.estoque > 0
+                    ? (isDark ? scheme.secondary.withOpacity(0.6) : scheme.secondary.withOpacity(0.18))
+                    : (isDark ? scheme.errorContainer.withOpacity(0.6) : scheme.surfaceContainerHighest),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          if (p.descricao != null)
+            Text(
+              p.descricao!,
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.5),
+            ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 16,
+            runSpacing: 12,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              qtyStepper(),
               ConstrainedBox(
-                constraints: const BoxConstraints(minWidth: 120),
-                child: FilledButton(
-                  onPressed: p.estoque > 0
+                constraints: const BoxConstraints(minWidth: 140, maxWidth: 240),
+                child: FilledButton.icon(
+                  icon: _adding
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.pets),
+                  label: const Text('Adicionar'),
+                  onPressed: (p.estoque > 0 && !_adding)
                       ? () async {
+                          setState(() => _adding = true);
                           try {
                             await ref.read(cartControllerProvider).addToCart(
                                   produtoId: p.id,
                                   nome: p.nome,
                                   preco: p.preco,
+                                  quantidade: _qty,
                                 );
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Adicionado (total atualizado no carrinho)')),
-                              );
-                            }
+                            if (!mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Adicionado ao carrinho')));
                           } on MergeConflict {
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Estoque insuficiente')),
-                              );
-                            }
+                            if (!mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Estoque insuficiente')));
+                          } finally {
+                            if (mounted) setState(() => _adding = false);
                           }
                         }
                       : null,
-                  child: const Text('Adicionar'),
                 ),
               ),
-              const SizedBox(width: 8),
-              OutlinedButton(onPressed: () {}, child: const Text('Avise-me')),
+              if (p.estoque <= 0)
+                OutlinedButton(
+                  onPressed: () {},
+                  child: const Text('Avise-me'),
+                ),
             ],
           ),
         ],
       );
 
-      if (isWide) {
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(child: image),
-            const SizedBox(width: 16),
-            Expanded(child: info),
-          ],
-        );
-      }
-      return ListView(
-        children: [
-          image,
-          const SizedBox(height: 12),
-          info,
-        ],
+      // Page content
+      final content = Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: maxContentWidth),
+          child: isWide
+              ? Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 360),
+                      child: Padding(
+                        padding: const EdgeInsets.only(right: 20),
+                        child: image,
+                      ),
+                    ),
+                    Expanded(child: Padding(padding: const EdgeInsets.only(top: 8), child: info)),
+                  ],
+                )
+              : ListView(
+                  children: [
+                    image,
+                    const SizedBox(height: 12),
+                    Padding(padding: const EdgeInsets.symmetric(horizontal: 8), child: info),
+                  ],
+                ),
+        ),
       );
+
+      return content;
     });
   }
 }
+

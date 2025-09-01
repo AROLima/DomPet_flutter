@@ -36,7 +36,8 @@ class FeaturedCarousel extends ConsumerStatefulWidget {
 }
 
 class _FeaturedCarouselState extends ConsumerState<FeaturedCarousel> {
-  final _controller = PageController(viewportFraction: 0.92, keepPage: true);
+  late PageController _controller;
+  double _viewport = 0.92;
   int _index = 0;
   Timer? _auto;
   int _count = 0;
@@ -63,6 +64,7 @@ class _FeaturedCarouselState extends ConsumerState<FeaturedCarousel> {
   @override
   void initState() {
     super.initState();
+  _controller = PageController(viewportFraction: _viewport, keepPage: true);
     _future = _load();
   }
 
@@ -134,6 +136,15 @@ class _FeaturedCarouselState extends ConsumerState<FeaturedCarousel> {
         return LayoutBuilder(builder: (context, constraints) {
           final w = constraints.maxWidth.clamp(320.0, 1920.0);
           final aspect = heroAspectFor(w);
+          // On very narrow viewports, use a fuller fraction to give more width per slide
+          final targetVf = constraints.maxWidth < 380 ? 0.98 : 0.92;
+          if (targetVf != _viewport) {
+            // Swap controller preserving page when viewport changes
+            final old = _controller;
+            _viewport = targetVf;
+            _controller = PageController(viewportFraction: _viewport, keepPage: true, initialPage: _index);
+            old.dispose();
+          }
           final hasMultiple = items.length > 1;
           // Update autoplay source count and restart if it changed
           if (_count != items.length) {
@@ -198,7 +209,7 @@ class _FeaturedCarouselState extends ConsumerState<FeaturedCarousel> {
                           child: Align(
                             alignment: Alignment.centerRight,
                             child: IconButton.filledTonal(
-                              tooltip: 'Pr\u00f3ximo',
+                              tooltip: 'Próximo',
                               onPressed: () {
                                 final next = (_index + 1) % items.length;
                                 _controller.animateToPage(next, duration: const Duration(milliseconds: 280), curve: Curves.easeOut);
@@ -244,6 +255,11 @@ class _SlideCard extends ConsumerWidget {
               alignment: Alignment.center,
               cacheWidth: 1600,
               cacheHeight: 800,
+              errorBuilder: (context, error, stack) => Container(
+                color: Theme.of(context).colorScheme.surfaceVariant,
+                alignment: Alignment.center,
+                child: const Icon(Icons.pets),
+              ),
             )
           else
             Container(
@@ -266,64 +282,76 @@ class _SlideCard extends ConsumerWidget {
             ),
           ),
           // conteúdo
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Align(
-              alignment: Alignment.bottomLeft,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 520),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      product.nome,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
+          LayoutBuilder(builder: (context, c) {
+            final tiny = c.maxWidth < 380;
+            final pad = tiny ? const EdgeInsets.all(12) : const EdgeInsets.all(20);
+            final titleStyle = (Theme.of(context).textTheme.headlineSmall ?? const TextStyle()).copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+              fontSize: tiny ? 18 : null,
+            );
+            return Padding(
+              padding: pad,
+              child: Align(
+                alignment: Alignment.bottomLeft,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: tiny ? 360 : 520),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        product.nome,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: titleStyle,
+                      ),
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          ConstrainedBox(
+                            constraints: BoxConstraints(minWidth: 120, maxWidth: tiny ? 160 : 220),
+                            child: FilledButton(
+                              style: tiny
+                                  ? FilledButton.styleFrom(minimumSize: const Size(100, 36), padding: const EdgeInsets.symmetric(horizontal: 12))
+                                  : null,
+                              onPressed: () => context.push('/produto/${product.id}'),
+                              child: const Text('Ver produto'),
+                            ),
                           ),
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 12,
-                      runSpacing: 8,
-                      children: [
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(minWidth: 120, maxWidth: 220),
-                          child: FilledButton(
-                            onPressed: () => context.push('/produto/${product.id}'),
-                            child: const Text('Ver produto'),
+                          ConstrainedBox(
+                            constraints: BoxConstraints(minWidth: 120, maxWidth: tiny ? 160 : 220),
+                            child: OutlinedButton(
+                              style: tiny
+                                  ? OutlinedButton.styleFrom(minimumSize: const Size(100, 36), padding: const EdgeInsets.symmetric(horizontal: 12))
+                                  : null,
+                              onPressed: () async {
+                                try {
+                                  await ref.read(cartControllerProvider).addToCart(
+                                        produtoId: product.id,
+                                        nome: product.nome,
+                                        preco: product.preco,
+                                      );
+                                  if (!context.mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Adicionado ao carrinho')));
+                                } on MergeConflict {
+                                  if (!context.mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Estoque insuficiente')));
+                                }
+                              },
+                              child: const Text('Adicionar'),
+                            ),
                           ),
-                        ),
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(minWidth: 120, maxWidth: 220),
-                          child: OutlinedButton(
-                            onPressed: () async {
-                              try {
-                                await ref.read(cartControllerProvider).addToCart(
-                                      produtoId: product.id,
-                                      nome: product.nome,
-                                      preco: product.preco,
-                                    );
-                                if (!context.mounted) return;
-                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Adicionado ao carrinho')));
-                              } on MergeConflict {
-                                if (!context.mounted) return;
-                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Estoque insuficiente')));
-                              }
-                            },
-                            child: const Text('Adicionar'),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ),
+            );
+          }),
         ],
       ),
       ),
