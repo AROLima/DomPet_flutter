@@ -88,6 +88,7 @@ ThemeData buildLightTheme() {
     brightness: Brightness.light,
   );
   return base.copyWith(
+  appBarTheme: base.appBarTheme.copyWith(centerTitle: true),
     colorScheme: base.colorScheme.copyWith(
       primary: AppColors.primary,
       onPrimary: AppColors.onPrimary,
@@ -134,6 +135,7 @@ ThemeData buildDarkTheme() {
     brightness: Brightness.dark,
   );
   return base.copyWith(
+  appBarTheme: base.appBarTheme.copyWith(centerTitle: true),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ButtonStyle(
         minimumSize: MaterialStateProperty.all(const Size(120, 40)),

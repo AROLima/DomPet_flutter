@@ -37,27 +37,44 @@ class ProductsService {
   }
 
   Future<PageResult<Produto>> search({String? nome, String? categoria, int page = 0, int size = 20, String? sort}) async {
-    final res = await _dio.get('/produtos/search', queryParameters: {
-      if (nome != null && nome.isNotEmpty) 'nome': nome,
-      if (categoria != null && categoria.isNotEmpty) 'categoria': categoria,
-      'page': page,
-      'size': size,
-      if (sort != null) 'sort': sort,
-    });
-    if (res.statusCode == 204 || res.data == null || (res.data is String && (res.data as String).isEmpty)) {
-      // Normalize empty responses to an empty PageResult so callers don't
-      // need to handle null/204 specially.
+    try {
+      final res = await _dio.get('/produtos/search', queryParameters: {
+        if (nome != null && nome.isNotEmpty) 'nome': nome,
+        if (categoria != null && categoria.isNotEmpty) 'categoria': categoria,
+        'page': page,
+        'size': size,
+        if (sort != null) 'sort': sort,
+      });
+      if (res.statusCode == 204 || res.data == null || (res.data is String && (res.data as String).isEmpty)) {
+        // Normalize empty responses to an empty PageResult so callers don't
+        // need to handle null/204 specially.
+        return PageResult<Produto>(
+          content: const [],
+          number: page,
+          size: size,
+          totalElements: 0,
+          totalPages: page + 1,
+          last: true,
+          first: page == 0,
+        );
+      }
+      return PageResult.fromJson(res.data as Map<String, dynamic>, (obj) => Produto.fromJson(obj as Map<String, dynamic>));
+    } on DioException {
+      // Fallback: if search is unavailable/misconfigured, try getAll so UI isn't empty
+      final all = await getAll();
+      final slice = all.skip(page * size).take(size).toList();
+      final total = all.length;
+      final totalPages = (total / size).ceil().clamp(1, 1 << 31);
       return PageResult<Produto>(
-        content: const [],
+        content: slice,
         number: page,
         size: size,
-        totalElements: 0,
-        totalPages: page + 1,
-        last: true,
+        totalElements: total,
+        totalPages: totalPages,
+        last: page + 1 >= totalPages,
         first: page == 0,
       );
     }
-    return PageResult.fromJson(res.data as Map<String, dynamic>, (obj) => Produto.fromJson(obj as Map<String, dynamic>));
   }
 
   Future<ProdutoDetalhe> getDetail(int id) async {
@@ -79,7 +96,9 @@ class ProductsService {
     if (res.statusCode == 204 || res.data == null || (res.data is String && (res.data as String).isEmpty)) {
       return [];
     }
-    return (res.data as List).map((e) => e.toString()).toList();
+  final list = (res.data as List).map((e) => e.toString()).toList();
+  list.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+  return list;
   }
 }
 

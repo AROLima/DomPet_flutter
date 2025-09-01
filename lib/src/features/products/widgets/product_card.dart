@@ -117,8 +117,8 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                     spacing: 8,
                     runSpacing: 8,
                     children: [
-                      ConstrainedBox(
-                        constraints: const BoxConstraints(minWidth: 120, maxWidth: 220),
+                      SizedBox(
+                        width: 160,
                         child: FilledButton(
                           onPressed: (_loading || p.estoque <= 0)
                               ? null
@@ -144,8 +144,8 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                               : const Text('Adicionar'),
                         ),
                       ),
-                      ConstrainedBox(
-                        constraints: const BoxConstraints(minWidth: 120, maxWidth: 220),
+                      SizedBox(
+                        width: 120,
                         child: OutlinedButton(
                           onPressed: widget.onView,
                           child: const Text('Ver'),

@@ -30,6 +30,8 @@ import 'features/orders/pages/order_detail_page.dart';
 import 'features/profile/profile_page.dart';
 import 'shared/splash_page.dart';
 import '../features/admin/products/admin_produto_form_page.dart';
+import '../features/admin/products/admin_produtos_page.dart';
+import '../features/admin/products/admin_produto_delete_page.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -123,6 +125,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       // Admin: produtos
       GoRoute(
+        path: '/admin/produtos',
+        name: 'adminProdutos',
+        builder: (context, state) => const AdminProdutosPage(),
+        redirect: (context, state) {
+          final session = ref.read(sessionProvider).value;
+          final roles = session?.roles ?? const <String>[];
+          if (session == null) return '/login';
+          if (!(roles.contains('ADMIN') || roles.contains('ROLE_ADMIN'))) return '/?denied=1';
+          return null;
+        },
+      ),
+      GoRoute(
         path: '/admin/produtos/novo',
         name: 'adminProdutosNovo',
         builder: (context, state) => const AdminProdutoFormPage(),
@@ -130,7 +144,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           final session = ref.read(sessionProvider).value;
           final roles = session?.roles ?? const <String>[];
           if (session == null) return '/login';
-          if (!(roles.contains('ADMIN') || roles.contains('ROLE_ADMIN'))) return '/';
+          if (!(roles.contains('ADMIN') || roles.contains('ROLE_ADMIN'))) return '/?denied=1';
           return null;
         },
       ),
@@ -142,7 +156,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           final session = ref.read(sessionProvider).value;
           final roles = session?.roles ?? const <String>[];
           if (session == null) return '/login';
-          if (!(roles.contains('ADMIN') || roles.contains('ROLE_ADMIN'))) return '/';
+          if (!(roles.contains('ADMIN') || roles.contains('ROLE_ADMIN'))) return '/?denied=1';
+          return null;
+        },
+      ),
+      GoRoute(
+        path: '/admin/produtos/:id/excluir',
+        name: 'adminProdutosExcluir',
+        builder: (context, state) => AdminProdutoDeletePage(id: int.tryParse(state.pathParameters['id'] ?? '') ?? 0),
+        redirect: (context, state) {
+          final session = ref.read(sessionProvider).value;
+          final roles = session?.roles ?? const <String>[];
+          if (session == null) return '/login';
+          if (!(roles.contains('ADMIN') || roles.contains('ROLE_ADMIN'))) return '/?denied=1';
           return null;
         },
       ),

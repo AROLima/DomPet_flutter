@@ -55,6 +55,18 @@ class _CartPageState extends ConsumerState<CartPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          tooltip: 'Início',
+          icon: const Icon(Icons.home_outlined),
+          onPressed: () {
+            final nav = Navigator.of(context);
+            if (nav.canPop()) {
+              nav.pop();
+            } else {
+              context.go('/');
+            }
+          },
+        ),
         title: const Text('Carrinho'),
         actions: [
           TextButton.icon(

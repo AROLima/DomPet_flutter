@@ -22,7 +22,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/http/api_client.dart';
+import '../../core/auth/session.dart';
 
 final profileProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   final dio = ref.read(dioProvider);
@@ -36,7 +38,16 @@ class ProfilePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(profileProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Perfil')),
+      appBar: AppBar(
+        leading: IconButton(
+          tooltip: 'Início',
+          icon: const Icon(Icons.home_outlined),
+          onPressed: () => Navigator.of(context).maybePop().then((popped) {
+            if (!(popped ?? false)) context.go('/');
+          }),
+        ),
+        title: const Text('Perfil'),
+      ),
       body: async.when(
         data: (json) => ListView(
           padding: const EdgeInsets.all(16),
@@ -59,6 +70,25 @@ class ProfilePage extends ConsumerWidget {
                 value: json['ativo'] == true,
                 onChanged: null,
               ),
+            const SizedBox(height: 16),
+            // Admin shortcuts (visible only for ADMIN roles)
+            Consumer(builder: (context, ref, _) {
+              final roles = ref.watch(sessionProvider).value?.roles ?? const <String>[];
+              final isAdmin = roles.contains('ADMIN') || roles.contains('ROLE_ADMIN');
+              if (!isAdmin) return const SizedBox.shrink();
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Admin', style: Theme.of(context).textTheme.titleMedium),
+                  ListTile(
+                    leading: const Icon(Icons.admin_panel_settings),
+                    title: const Text('Gerenciar produtos'),
+                    subtitle: const Text('Abrir lista de produtos (editar/excluir)'),
+                    onTap: () => context.push('/admin/produtos'),
+                  ),
+                ],
+              );
+            }),
           ],
         ),
         loading: () => const Center(child: CircularProgressIndicator()),

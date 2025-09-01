@@ -2,6 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'admin_produto_controller.dart';
 import 'widgets/currency_field.dart';
+import '../../../src/core/http/api_client.dart';
+import 'package:go_router/go_router.dart';
+import '../../../src/core/http/problem_detail.dart';
+import '../../../src/features/products/products_service.dart';
+import '../../../src/shared/models/product.dart';
+import '../widgets/admin_drawer.dart';
 
 // DIDACTIC: AdminProdutoFormPage — admin UI for creating/editing products
 
@@ -14,7 +20,6 @@ import 'widgets/currency_field.dart';
 // - Outputs: calls controller/repository to persist changes and navigates on success.
 //
 // Notes:
-// - Use `AdminProdutoController` for validation and mapping; keep the page as
 //   a composition of form fields and action buttons.
 
 class AdminProdutoFormPage extends ConsumerStatefulWidget {
@@ -34,10 +39,11 @@ class _AdminProdutoFormPageState extends ConsumerState<AdminProdutoFormPage> {
   final thumbnail = TextEditingController();
   final descricao = TextEditingController();
   String? categoria;
+  String? _etag; // captured from GET headers via dio cache is internal; we fetch explicitly on edit
 
   @override
   void initState() {
-    super.initState();
+  super.initState();
     Future.microtask(() async {
       await ref.read(adminProdutoControllerProvider.notifier).loadCategorias();
       if (widget.editarId != null) {
@@ -51,6 +57,12 @@ class _AdminProdutoFormPageState extends ConsumerState<AdminProdutoFormPage> {
           thumbnail.text = init['thumbnailUrl']?.toString() ?? '';
           descricao.text = init['descricao']?.toString() ?? '';
           categoria = init['categoria']?.toString();
+          // Fetch to capture latest ETag for edit mode
+          try {
+            final dio = ref.read(dioProvider);
+            final res = await dio.get('/produtos/${widget.editarId!}');
+            _etag = res.headers.value('etag');
+          } catch (_) {}
           setState(() {});
         }
       }
@@ -67,10 +79,20 @@ class _AdminProdutoFormPageState extends ConsumerState<AdminProdutoFormPage> {
   }
 
   double _parsePreco(String text) {
-    final digits = text.replaceAll(RegExp(r'[^0-9]'), '');
-    if (digits.isEmpty) return 0.0;
-    final cents = int.parse(digits);
-    return cents / 100.0;
+    // Remove R$, spaces, and handle comma/period decimal separators
+    String cleaned = text.replaceAll(RegExp(r'[R$\s]'), '');
+    
+    // Handle different decimal formats (e.g., "79,90" or "79.90")
+    if (cleaned.contains(',')) {
+      // Replace comma with period for decimal
+      cleaned = cleaned.replaceAll(',', '.');
+    }
+    
+    // Remove any remaining non-numeric characters except decimal point
+    cleaned = cleaned.replaceAll(RegExp(r'[^0-9.]'), '');
+    
+    if (cleaned.isEmpty) return 0.0;
+    return double.tryParse(cleaned) ?? 0.0;
   }
 
   @override
@@ -79,7 +101,15 @@ class _AdminProdutoFormPageState extends ConsumerState<AdminProdutoFormPage> {
     final errs = state.errors;
 
     return Scaffold(
-      appBar: AppBar(title: Text(widget.editarId == null ? 'Novo Produto' : 'Editar Produto #${widget.editarId}')),
+      appBar: AppBar(
+        leading: IconButton(
+          tooltip: 'Início',
+          icon: const Icon(Icons.home_outlined),
+          onPressed: () => context.go('/'),
+        ),
+        title: Text(widget.editarId == null ? 'Novo Produto' : 'Editar Produto #${widget.editarId}'),
+      ),
+      drawer: const AdminDrawer(),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 900),
@@ -166,33 +196,88 @@ class _AdminProdutoFormPageState extends ConsumerState<AdminProdutoFormPage> {
 
   Future<void> _onSalvar() async {
     if (!_formKey.currentState!.validate()) return;
+    
     final dto = <String, dynamic>{
       'nome': nome.text.trim(),
-      'sku': sku.text.trim().isEmpty ? null : sku.text.trim(),
-      'categoria': categoria,
-      'preco': _parsePreco(preco.text),
-      'estoque': int.tryParse(estoque.text) ?? 0,
       'descricao': descricao.text.trim().isEmpty ? null : descricao.text.trim(),
+      'preco': _parsePreco(preco.text),
+      'estoque': int.tryParse(estoque.text),
       'imagemUrl': thumbnail.text.trim().isEmpty ? null : thumbnail.text.trim(),
+      'categoria': categoria,
+      'ativo': true, // mantém ativo ao editar, compatível com update parcial
+      'sku': sku.text.trim().isEmpty ? null : sku.text.trim(),
     };
+    
     final notifier = ref.read(adminProdutoControllerProvider.notifier);
     try {
       if (widget.editarId == null) {
         final id = await notifier.salvarNovo(dto);
         if (!mounted) return;
-        _showSnack('Produto criado (#$id)');
+  _showSnack('Produto criado (#$id)');
+  context.go('/produto/$id');
       } else {
-        final id = await notifier.salvarEdicao(widget.editarId!, dto);
-        if (!mounted) return;
-        _showSnack('Produto atualizado (#$id)');
+        try {
+          final id = await notifier.salvarEdicao(widget.editarId!, dto, etag: _etag);
+          if (!mounted) return;
+          _showSnack('Produto atualizado (#$id)');
+          // Invalidate providers to refresh data
+          ref.invalidate(productDetailProvider(widget.editarId!));
+          // Navigate to detail page
+          if (mounted) context.go('/produto/${widget.editarId}');
+        } on ProblemDetail catch (p) {
+          if (!mounted) return;
+          final sc = p.status ?? 0;
+          if (sc == 409 || sc == 412) {
+            final reload = await _showConflictDialog(context);
+            if (reload == true && mounted) {
+              // Reload data and ETag, stay on form for retry
+              try {
+                final dio = ref.read(dioProvider);
+                final res = await dio.get('/produtos/${widget.editarId!}');
+                _etag = res.headers.value('etag');
+                final detail = ProdutoDetalhe.fromJson(res.data as Map<String, dynamic>);
+                nome.text = detail.nome;
+                sku.text = detail.sku ?? '';
+                categoria = detail.categoria;
+                preco.text = _formatFromNumber(detail.preco);
+                estoque.text = detail.estoque.toString();
+                thumbnail.text = detail.imagemUrl ?? '';
+                descricao.text = detail.descricao ?? '';
+                setState(() {});
+              } catch (e) {
+                _showSnack('Erro ao recarregar dados: $e');
+              }
+            }
+          } else {
+            // For other errors, show message and don't retry
+            _showSnack('Erro ao salvar: ${p.title ?? p.detail ?? 'Erro desconhecido'}');
+          }
+        } catch (e) {
+          if (!mounted) return;
+          _showSnack('Erro ao salvar: $e');
+        }
       }
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
-      _showSnack('Erro ao salvar');
+      _showSnack('Erro ao salvar: $e');
     }
   }
 
   void _showSnack(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  Future<bool?> _showConflictDialog(BuildContext context) {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Conflito de atualização'),
+        content: const Text('O produto foi atualizado por outra pessoa. Recarregar e tentar novamente?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Fechar')),
+          FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Recarregar')),
+        ],
+      ),
+    );
   }
 }

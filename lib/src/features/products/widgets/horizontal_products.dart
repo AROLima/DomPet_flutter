@@ -45,9 +45,16 @@ class HorizontalProducts extends ConsumerWidget {
 
 final _provider = FutureProvider.family<List<Produto>, (String?, int, String?)>((ref, key) async {
   final (sort, size, category) = key;
+  // Whitelist supported sort fields to avoid backend errors
+  String? safeSort;
+  if (sort != null) {
+    final s = sort.split(',').first.trim().toLowerCase();
+    const allowed = {'id', 'preco', 'nome'}; // backend supports these fields
+    if (allowed.contains(s)) safeSort = sort;
+  }
   final svc = ref.read(productsServiceProvider);
   try {
-    final res = await svc.search(page: 0, size: size, sort: sort, categoria: category);
+    final res = await svc.search(page: 0, size: size, sort: safeSort, categoria: category);
     return res.content;
   } catch (e) {
     // Safeguard: fall back to getAll to avoid empty sections on transient backend errors

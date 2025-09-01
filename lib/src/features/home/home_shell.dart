@@ -28,6 +28,7 @@ import 'widgets/category_shortcuts.dart';
 import 'selected_category.dart';
 import '../products/widgets/horizontal_products.dart';
 import '../../../ui/widgets/responsive_scaffold.dart';
+import '../../../ui/widgets/home_app_drawer.dart';
 
 // Home shell combines search, shortcuts, featured carousel and several
 // horizontal product sections. It keeps local search/autocomplete state and
@@ -77,7 +78,24 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   @override
   Widget build(BuildContext context) {
     final selectedCat = ref.watch(selectedCategoryProvider);
+    // Show access denied toast if redirected here with ?denied=1
+    try {
+      final r = Router.maybeOf(context);
+      String? loc;
+      if (r?.routeInformationProvider case final p?) {
+        loc = p.value.location;
+      }
+      loc ??= Uri.base.toString();
+      final uri = Uri.parse(loc);
+      if (uri.queryParameters['denied'] == '1') {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!context.mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Acesso restrito')));
+        });
+      }
+    } catch (_) {}
     return ResponsiveScaffold(
+      drawer: const HomeAppDrawer(),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: maxContentWidth),
@@ -115,9 +133,10 @@ class _HomeShellState extends ConsumerState<HomeShell> {
                 ),
               FeaturedCarousel(category: selectedCat),
               const SizedBox(height: 24),
-              HorizontalProducts(title: 'Ofertas', sort: 'vendidos,desc', size: 12, category: selectedCat),
+              // Use supported sort field; 'vendidos' doesn't exist on backend entity
+              HorizontalProducts(title: 'Ofertas', sort: 'id,desc', size: 12, category: selectedCat),
               const SizedBox(height: 24),
-              HorizontalProducts(title: 'Mais vendidos', sort: 'vendidos,desc', size: 12, category: selectedCat),
+              HorizontalProducts(title: 'Mais vendidos', sort: 'id,desc', size: 12, category: selectedCat),
               const SizedBox(height: 24),
               HorizontalProducts(title: 'Novidades', sort: 'id,desc', size: 12, category: selectedCat),
               const SizedBox(height: 24),
