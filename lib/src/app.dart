@@ -24,6 +24,7 @@ class AppWidget extends ConsumerWidget {
     final router = ref.watch(appRouterProvider);
 
     return MaterialApp.router(
+      debugShowCheckedModeBanner: false,
       title: 'DomPet',
       themeMode: ThemeMode.system,
       theme: buildLightTheme(),
