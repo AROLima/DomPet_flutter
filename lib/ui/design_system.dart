@@ -113,8 +113,6 @@ ThemeData buildLightTheme() {
     onTertiary: AppColors.onTertiary,
     error: AppColors.error,
     onError: Colors.white,
-    background: AppColors.background,
-    onBackground: AppColors.onSurface,
     surface: AppColors.surface,
     onSurface: AppColors.onSurface,
     outline: AppColors.outline,
@@ -124,16 +122,16 @@ ThemeData buildLightTheme() {
     useMaterial3: true,
     colorScheme: scheme,
     brightness: Brightness.light,
-    scaffoldBackgroundColor: scheme.background,
-    canvasColor: scheme.background,
+  scaffoldBackgroundColor: scheme.surface,
+  canvasColor: scheme.surface,
     visualDensity: VisualDensity.standard,
   );
 
   final textTheme = GoogleFonts.nunitoTextTheme(base.textTheme).copyWith(
-    titleMedium: GoogleFonts.nunito(textStyle: base.textTheme.titleMedium)?.copyWith(height: 1.3),
-    titleLarge: GoogleFonts.nunito(textStyle: base.textTheme.titleLarge)?.copyWith(height: 1.3, fontWeight: FontWeight.w700),
-    bodyMedium: GoogleFonts.nunito(textStyle: base.textTheme.bodyMedium)?.copyWith(height: 1.45),
-    bodyLarge: GoogleFonts.nunito(textStyle: base.textTheme.bodyLarge)?.copyWith(height: 1.45),
+    titleMedium: GoogleFonts.nunito(textStyle: base.textTheme.titleMedium).copyWith(height: 1.3),
+    titleLarge: GoogleFonts.nunito(textStyle: base.textTheme.titleLarge).copyWith(height: 1.3, fontWeight: FontWeight.w700),
+    bodyMedium: GoogleFonts.nunito(textStyle: base.textTheme.bodyMedium).copyWith(height: 1.45),
+    bodyLarge: GoogleFonts.nunito(textStyle: base.textTheme.bodyLarge).copyWith(height: 1.45),
   );
 
   final rounded16 = const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(AppTokens.r16)));
@@ -144,53 +142,53 @@ ThemeData buildLightTheme() {
       backgroundColor: scheme.surface,
       foregroundColor: scheme.onSurface,
       elevation: 1,
-      shadowColor: scheme.onSurface.withOpacity(0.06),
+      shadowColor: scheme.onSurface.withValues(alpha: 0.06),
     ),
     textTheme: textTheme,
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ButtonStyle(
-        minimumSize: const MaterialStatePropertyAll(Size(120, 40)),
-        maximumSize: const MaterialStatePropertyAll(Size(220, 48)),
-        shape: MaterialStatePropertyAll(rounded16),
-        elevation: const MaterialStatePropertyAll(AppTokens.e1),
-        overlayColor: MaterialStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.pressed)) return scheme.primary.withOpacity(0.12);
-          if (states.contains(WidgetState.hovered)) return scheme.primary.withOpacity(0.08);
+        minimumSize: const WidgetStatePropertyAll(Size(120, 40)),
+        maximumSize: const WidgetStatePropertyAll(Size(220, 48)),
+        shape: WidgetStatePropertyAll(rounded16),
+        elevation: const WidgetStatePropertyAll(AppTokens.e1),
+        overlayColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.pressed)) return scheme.primary.withValues(alpha: 0.12);
+          if (states.contains(WidgetState.hovered)) return scheme.primary.withValues(alpha: 0.08);
           return null;
         }),
       ),
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: ButtonStyle(
-        minimumSize: const MaterialStatePropertyAll(Size(120, 40)),
-        maximumSize: const MaterialStatePropertyAll(Size(220, 48)),
-        shape: MaterialStatePropertyAll(rounded16),
-        overlayColor: MaterialStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.pressed)) return scheme.primary.withOpacity(0.12);
-          if (states.contains(WidgetState.hovered)) return scheme.primary.withOpacity(0.08);
+        minimumSize: const WidgetStatePropertyAll(Size(120, 40)),
+        maximumSize: const WidgetStatePropertyAll(Size(220, 48)),
+        shape: WidgetStatePropertyAll(rounded16),
+        overlayColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.pressed)) return scheme.primary.withValues(alpha: 0.12);
+          if (states.contains(WidgetState.hovered)) return scheme.primary.withValues(alpha: 0.08);
           return null;
         }),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: ButtonStyle(
-        minimumSize: const MaterialStatePropertyAll(Size(120, 40)),
-        maximumSize: const MaterialStatePropertyAll(Size(220, 48)),
-        shape: MaterialStatePropertyAll(rounded16),
-        side: MaterialStatePropertyAll(BorderSide(color: scheme.outline)),
-        overlayColor: MaterialStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.pressed)) return scheme.primary.withOpacity(0.06);
-          if (states.contains(WidgetState.hovered)) return scheme.primary.withOpacity(0.04);
+        minimumSize: const WidgetStatePropertyAll(Size(120, 40)),
+        maximumSize: const WidgetStatePropertyAll(Size(220, 48)),
+        shape: WidgetStatePropertyAll(rounded16),
+        side: WidgetStatePropertyAll(BorderSide(color: scheme.outline)),
+        overlayColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.pressed)) return scheme.primary.withValues(alpha: 0.06);
+          if (states.contains(WidgetState.hovered)) return scheme.primary.withValues(alpha: 0.04);
           return null;
         }),
       ),
     ),
     chipTheme: base.chipTheme.copyWith(
-      backgroundColor: AppColors.secondary.withOpacity(0.10),
+      backgroundColor: AppColors.secondary.withValues(alpha: 0.10),
       selectedColor: AppColors.secondary,
       labelStyle: TextStyle(color: scheme.onSecondary, fontWeight: FontWeight.w700),
       deleteIconColor: scheme.onSecondary,
-      side: BorderSide(color: scheme.outline.withOpacity(0.8)),
+      side: BorderSide(color: scheme.outline.withValues(alpha: 0.8)),
       shape: const StadiumBorder(),
       padding: const EdgeInsets.symmetric(horizontal: AppTokens.s12, vertical: AppTokens.s8),
     ),
@@ -201,13 +199,13 @@ ThemeData buildLightTheme() {
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppTokens.r12), borderSide: BorderSide(color: scheme.outline)),
       enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppTokens.r12), borderSide: BorderSide(color: scheme.outline)),
       focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppTokens.r12), borderSide: BorderSide(color: scheme.primary, width: 2)),
-      labelStyle: TextStyle(color: scheme.onSurface.withOpacity(0.8)),
-      hintStyle: TextStyle(color: scheme.onSurface.withOpacity(0.6)),
+      labelStyle: TextStyle(color: scheme.onSurface.withValues(alpha: 0.8)),
+      hintStyle: TextStyle(color: scheme.onSurface.withValues(alpha: 0.6)),
     ),
-    cardTheme: CardThemeData(
+  cardTheme: CardThemeData(
       color: scheme.surface,
       elevation: AppTokens.e1,
-      shadowColor: scheme.onSurface.withOpacity(0.08),
+      shadowColor: scheme.onSurface.withValues(alpha: 0.08),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTokens.r16)),
       clipBehavior: Clip.antiAlias,
       margin: const EdgeInsets.all(AppTokens.s8),
@@ -241,8 +239,6 @@ ThemeData buildDarkTheme() {
     onTertiary: AppColors.onTertiary,
     error: const Color(0xFFF87171),
     onError: Colors.white,
-    background: const Color(0xFF0F172A),
-    onBackground: const Color(0xFFE5E7EB),
     surface: const Color(0xFF111827),
     onSurface: const Color(0xFFE5E7EB),
     outline: const Color(0xFF374151),
@@ -252,16 +248,16 @@ ThemeData buildDarkTheme() {
     useMaterial3: true,
     colorScheme: scheme,
     brightness: Brightness.dark,
-    scaffoldBackgroundColor: scheme.background,
-    canvasColor: scheme.background,
+  scaffoldBackgroundColor: scheme.surface,
+  canvasColor: scheme.surface,
     visualDensity: VisualDensity.standard,
   );
 
   final textTheme = GoogleFonts.nunitoTextTheme(base.textTheme).copyWith(
-    titleMedium: GoogleFonts.nunito(textStyle: base.textTheme.titleMedium)?.copyWith(height: 1.3),
-    titleLarge: GoogleFonts.nunito(textStyle: base.textTheme.titleLarge)?.copyWith(height: 1.3, fontWeight: FontWeight.w600),
-    bodyMedium: GoogleFonts.nunito(textStyle: base.textTheme.bodyMedium)?.copyWith(height: 1.45),
-    bodyLarge: GoogleFonts.nunito(textStyle: base.textTheme.bodyLarge)?.copyWith(height: 1.45),
+    titleMedium: GoogleFonts.nunito(textStyle: base.textTheme.titleMedium).copyWith(height: 1.3),
+    titleLarge: GoogleFonts.nunito(textStyle: base.textTheme.titleLarge).copyWith(height: 1.3, fontWeight: FontWeight.w600),
+    bodyMedium: GoogleFonts.nunito(textStyle: base.textTheme.bodyMedium).copyWith(height: 1.45),
+    bodyLarge: GoogleFonts.nunito(textStyle: base.textTheme.bodyLarge).copyWith(height: 1.45),
   );
 
   final rounded16 = const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(AppTokens.r16)));
@@ -272,52 +268,52 @@ ThemeData buildDarkTheme() {
       backgroundColor: scheme.surface,
       foregroundColor: scheme.onSurface,
       elevation: 1,
-      shadowColor: scheme.onSurface.withOpacity(0.3),
+      shadowColor: scheme.onSurface.withValues(alpha: 0.3),
     ),
     textTheme: textTheme,
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ButtonStyle(
-        minimumSize: const MaterialStatePropertyAll(Size(120, 40)),
-        maximumSize: const MaterialStatePropertyAll(Size(220, 48)),
-        shape: MaterialStatePropertyAll(rounded16),
-        elevation: const MaterialStatePropertyAll(AppTokens.e1),
-        overlayColor: MaterialStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.pressed)) return scheme.primary.withOpacity(0.18);
-          if (states.contains(WidgetState.hovered)) return scheme.primary.withOpacity(0.10);
+        minimumSize: const WidgetStatePropertyAll(Size(120, 40)),
+        maximumSize: const WidgetStatePropertyAll(Size(220, 48)),
+        shape: WidgetStatePropertyAll(rounded16),
+        elevation: const WidgetStatePropertyAll(AppTokens.e1),
+        overlayColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.pressed)) return scheme.primary.withValues(alpha: 0.18);
+          if (states.contains(WidgetState.hovered)) return scheme.primary.withValues(alpha: 0.10);
           return null;
         }),
       ),
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: ButtonStyle(
-        minimumSize: const MaterialStatePropertyAll(Size(120, 40)),
-        maximumSize: const MaterialStatePropertyAll(Size(220, 48)),
-        shape: MaterialStatePropertyAll(rounded16),
-        overlayColor: MaterialStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.pressed)) return scheme.primary.withOpacity(0.18);
-          if (states.contains(WidgetState.hovered)) return scheme.primary.withOpacity(0.10);
+        minimumSize: const WidgetStatePropertyAll(Size(120, 40)),
+        maximumSize: const WidgetStatePropertyAll(Size(220, 48)),
+        shape: WidgetStatePropertyAll(rounded16),
+        overlayColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.pressed)) return scheme.primary.withValues(alpha: 0.18);
+          if (states.contains(WidgetState.hovered)) return scheme.primary.withValues(alpha: 0.10);
           return null;
         }),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: ButtonStyle(
-        minimumSize: const MaterialStatePropertyAll(Size(120, 40)),
-        maximumSize: const MaterialStatePropertyAll(Size(220, 48)),
-        shape: MaterialStatePropertyAll(rounded16),
-        side: MaterialStatePropertyAll(BorderSide(color: scheme.outline)),
-        overlayColor: MaterialStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.pressed)) return scheme.primary.withOpacity(0.14);
-          if (states.contains(WidgetState.hovered)) return scheme.primary.withOpacity(0.08);
+        minimumSize: const WidgetStatePropertyAll(Size(120, 40)),
+        maximumSize: const WidgetStatePropertyAll(Size(220, 48)),
+        shape: WidgetStatePropertyAll(rounded16),
+        side: WidgetStatePropertyAll(BorderSide(color: scheme.outline)),
+        overlayColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.pressed)) return scheme.primary.withValues(alpha: 0.14);
+          if (states.contains(WidgetState.hovered)) return scheme.primary.withValues(alpha: 0.08);
           return null;
         }),
       ),
     ),
     chipTheme: base.chipTheme.copyWith(
-      backgroundColor: AppColors.secondary.withOpacity(0.18),
+      backgroundColor: AppColors.secondary.withValues(alpha: 0.18),
       selectedColor: AppColors.secondary,
       labelStyle: TextStyle(color: scheme.onSecondary),
-      side: BorderSide(color: scheme.outline),
+  side: BorderSide(color: scheme.outline),
       shape: const StadiumBorder(),
       padding: const EdgeInsets.symmetric(horizontal: AppTokens.s12, vertical: AppTokens.s8),
     ),
@@ -328,13 +324,13 @@ ThemeData buildDarkTheme() {
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppTokens.r12), borderSide: BorderSide(color: scheme.outline)),
       enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppTokens.r12), borderSide: BorderSide(color: scheme.outline)),
       focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppTokens.r12), borderSide: BorderSide(color: scheme.primary, width: 2)),
-      labelStyle: TextStyle(color: scheme.onSurface.withOpacity(0.9)),
-      hintStyle: TextStyle(color: scheme.onSurface.withOpacity(0.7)),
+      labelStyle: TextStyle(color: scheme.onSurface.withValues(alpha: 0.9)),
+      hintStyle: TextStyle(color: scheme.onSurface.withValues(alpha: 0.7)),
     ),
   cardTheme: CardThemeData(
       color: scheme.surface,
       elevation: AppTokens.e1,
-      shadowColor: scheme.onSurface.withOpacity(0.35),
+      shadowColor: scheme.onSurface.withValues(alpha: 0.35),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTokens.r16)),
       clipBehavior: Clip.antiAlias,
       margin: const EdgeInsets.all(AppTokens.s8),

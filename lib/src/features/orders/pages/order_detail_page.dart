@@ -55,15 +55,15 @@ class OrderDetailPage extends ConsumerWidget {
               ...p.itens.map((it) => ListTile(
                     contentPadding: EdgeInsets.zero,
                     title: Text(it.nome),
-                    subtitle: Text('Qtd: ' + it.quantidade.toString() + ' x R\$ ' + it.precoUnitario.toStringAsFixed(2)),
-                    trailing: Text('R\$ ' + it.subtotal.toStringAsFixed(2)),
+                    subtitle: Text('Qtd: ${it.quantidade} x R\$ ${it.precoUnitario.toStringAsFixed(2)}'),
+                    trailing: Text('R\$ ${it.subtotal.toStringAsFixed(2)}'),
                   )),
               const Divider(height: 24),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text('Total', style: Theme.of(context).textTheme.titleLarge),
-                  Text('R\$ ' + p.total.toStringAsFixed(2), style: Theme.of(context).textTheme.titleLarge),
+                  Text('R\$ ${p.total.toStringAsFixed(2)}', style: Theme.of(context).textTheme.titleLarge),
                 ],
               ),
             ],

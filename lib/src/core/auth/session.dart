@@ -3,7 +3,7 @@
 
 import 'dart:async';
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
+// import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:riverpod/riverpod.dart';
 
@@ -33,7 +33,9 @@ class Session {
       final parts = token.split('.');
       if (parts.length < 2) return const [];
       String normalized = parts[1].replaceAll('-', '+').replaceAll('_', '/');
-      while (normalized.length % 4 != 0) normalized += '=';
+      while (normalized.length % 4 != 0) {
+        normalized += '=';
+      }
       final payload = json.decode(utf8.decode(base64.decode(normalized))) as Map<String, dynamic>;
       final set = <String>{};
       void addAll(dynamic v) {

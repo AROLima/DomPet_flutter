@@ -42,7 +42,7 @@ class FakeCartService implements CartService {
 }
 
 class FakeProductsService extends ProductsService {
-  FakeProductsService(Ref ref) : super(ref);
+  FakeProductsService(super.ref);
   @override
   Future<ProdutoDetalhe> getDetail(int id) async {
     // produtoId 2 tem estoque 3

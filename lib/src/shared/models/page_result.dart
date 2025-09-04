@@ -35,24 +35,24 @@ class PageResult<T> {
     T Function(Object?) fromJsonT,
   ) {
     final contentList = (json['content'] as List?) ?? const [];
-    int _asInt(dynamic v, [int def = 0]) {
+    int asInt(dynamic v, [int def = 0]) {
       if (v is num) return v.toInt();
       if (v is String) return int.tryParse(v) ?? def;
       return def;
     }
-    bool _asBool(dynamic v, [bool def = false]) {
+    bool asBool(dynamic v, [bool def = false]) {
       if (v is bool) return v;
       if (v is String) return v.toLowerCase() == 'true';
       return def;
     }
     return PageResult<T>(
       content: contentList.map(fromJsonT).toList(),
-      number: _asInt(json['number']),
-      size: _asInt(json['size']),
-      totalElements: _asInt(json['totalElements']),
-      totalPages: _asInt(json['totalPages']),
-      last: _asBool(json['last']),
-      first: _asBool(json['first']),
+      number: asInt(json['number']),
+      size: asInt(json['size']),
+      totalElements: asInt(json['totalElements']),
+      totalPages: asInt(json['totalPages']),
+      last: asBool(json['last']),
+      first: asBool(json['first']),
     );
   }
 

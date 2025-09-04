@@ -81,7 +81,7 @@ class _HomePageState extends ConsumerState<HomePage> {
       final r = Router.maybeOf(context);
       if (r?.routeInformationProvider case final p?) {
         final info = p.value;
-        loc = info.location;
+        loc = info.uri.toString();
       }
       loc ??= Uri.base.toString();
       final uri = Uri.parse(loc);
@@ -114,28 +114,30 @@ class _HomePageState extends ConsumerState<HomePage> {
             builder: (context, c) {
               final wide = c.maxWidth >= 720;
               if (wide) {
-                return Row(children: [
+    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Expanded(
                     child: TextField(
                       controller: _searchCtrl,
                       decoration: const InputDecoration(
                         prefixIcon: Icon(Icons.search),
                         hintText: 'O que seu pet precisa?',
-                        isDense: false,
+      isDense: false,
+      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
                       ),
                       onSubmitted: (_) => setState(() => _page = 0),
                     ),
                   ),
                   const SizedBox(width: 12),
                   SizedBox(
-                    width: 220,
+                    width: 260,
                     child: catsAsync.when(
                       data: (cats) => DropdownButtonFormField<String?>(
                         isExpanded: true,
                         value: _categoria,
                         decoration: const InputDecoration(
-                          isDense: true,
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          isDense: false,
+                          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                           prefixIcon: Icon(Icons.category_outlined),
                           labelText: 'Categoria',
                         ),
@@ -163,6 +165,9 @@ class _HomePageState extends ConsumerState<HomePage> {
                     decoration: const InputDecoration(
                       prefixIcon: Icon(Icons.search),
                       hintText: 'O que seu pet precisa?',
+                      isDense: false,
+                      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
                     ),
                     onSubmitted: (_) => setState(() => _page = 0),
                   ),
@@ -172,8 +177,8 @@ class _HomePageState extends ConsumerState<HomePage> {
                       isExpanded: true,
                       value: _categoria,
                       decoration: const InputDecoration(
-                        isDense: true,
-                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        isDense: false,
+                        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                         hintText: 'Categoria',
                       ),
                       items: [
@@ -196,47 +201,85 @@ class _HomePageState extends ConsumerState<HomePage> {
           Expanded(
             child: pageAsync.when(
               data: (page) => LayoutBuilder(
-                builder: (context, constraints) => Column(
+                builder: (context, constraints) {
+                  final itemsLen = page.content.length;
+                  // Choose a pleasant max width for the grid area based on item count
+                  final gridMaxWidth = itemsLen <= 1
+                      ? 460.0
+                      : (itemsLen == 2
+                          ? 860.0
+                          : 1200.0);
+                  final effectiveWidth = constraints.maxWidth.clamp(320.0, gridMaxWidth);
+                  // Cap the number of columns to the number of items to avoid large empty space on the right
+                  int cols;
+                  if (itemsLen <= 1) {
+                    cols = 1;
+                  } else if (constraints.maxWidth < 720) {
+                    cols = itemsLen == 1 ? 1 : 2;
+                  } else {
+                    cols = gridColsFor(effectiveWidth).clamp(1, itemsLen);
+                  }
+                  return Column(
                   children: [
                     Expanded(
-                      child: GridView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          // Be more conservative on small widths: use 2 cols below ~720px
-                          crossAxisCount: constraints.maxWidth < 720
-                              ? 2
-                              : gridColsFor(constraints.maxWidth),
-                          mainAxisSpacing: 12,
-                          crossAxisSpacing: 12,
-              childAspectRatio: (constraints.maxWidth < AppBreakpoints.xs)
-                ? 0.60
-                : (constraints.maxWidth < AppBreakpoints.md)
-                  ? 0.70
-                  : 0.82,
-                        ),
-                        itemCount: page.content.length,
-                        itemBuilder: (_, i) => _ProductCard(
-                          produto: page.content[i],
-                          isWide: constraints.maxWidth >= AppBreakpoints.md,
+                      child: page.content.isEmpty
+                          ? Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: const [
+                                  Icon(Icons.search_off, size: 36),
+                                  SizedBox(height: 8),
+                                  Text('Nenhum produto encontrado'),
+                                ],
+                              ),
+                            )
+                          : Center(
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(maxWidth: gridMaxWidth),
+                                child: GridView.builder(
+                                  padding: EdgeInsets.zero,
+                                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                    // Center by constraining the width and capping columns to items
+                                    crossAxisCount: cols,
+                                    mainAxisSpacing: 12,
+                                    crossAxisSpacing: 12,
+                  childAspectRatio: (constraints.maxWidth < AppBreakpoints.xs)
+                    ? 0.60
+                    : (constraints.maxWidth < AppBreakpoints.md)
+                      ? 0.72
+                      : 0.86,
+                                  ),
+                                  itemCount: page.content.length,
+                                  itemBuilder: (_, i) => _ProductCard(
+                                    produto: page.content[i],
+                                    isWide: constraints.maxWidth >= AppBreakpoints.md,
+                                  ),
+                                ),
+                              ),
+                            ),
+                    ),
+                    Center(
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(maxWidth: gridMaxWidth),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            IconButton(
+                              onPressed: page.number > 0 ? () => setState(() => _page -= 1) : null,
+                              icon: const Icon(Icons.chevron_left),
+                            ),
+                            Text('P\u00e1gina ${page.number + 1} de ${page.totalPages}'),
+                            IconButton(
+                              onPressed: (page.number + 1) < page.totalPages ? () => setState(() => _page += 1) : null,
+                              icon: const Icon(Icons.chevron_right),
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        IconButton(
-                          onPressed: page.number > 0 ? () => setState(() => _page -= 1) : null,
-                          icon: const Icon(Icons.chevron_left),
-                        ),
-                        Text('P\u00e1gina ${page.number + 1} de ${page.totalPages}'),
-                        IconButton(
-                          onPressed: (page.number + 1) < page.totalPages ? () => setState(() => _page += 1) : null,
-                          icon: const Icon(Icons.chevron_right),
-                        ),
-                      ],
-                    ),
                   ],
-                ),
+                );
+                },
               ),
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, st) => Center(child: Text('Erro: $e')),
@@ -273,7 +316,7 @@ class _ProductCardState extends ConsumerState<_ProductCard> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             AspectRatio(
-              aspectRatio: 4 / 3,
+              aspectRatio: 16 / 11,
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: produto.imagemUrl != null
@@ -303,16 +346,65 @@ class _ProductCardState extends ConsumerState<_ProductCard> {
             const SizedBox(height: 4),
             Text(formatBrl(produto.preco)),
             const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                ConstrainedBox(
-                  constraints: const BoxConstraints(minWidth: 120, maxWidth: 220),
-                  child: FilledButton(
+            LayoutBuilder(builder: (ctx, c) {
+              final narrow = c.maxWidth < 180;
+              final btnMinSize = const Size(0, 36);
+              final pad = const EdgeInsets.symmetric(horizontal: 12, vertical: 10);
+              if (narrow) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    FilledButton(
+                      style: FilledButton.styleFrom(minimumSize: btnMinSize, padding: pad),
+                      onPressed: (!_loading && produto.estoque > 0)
+                          ? () async {
+                              setState(() => _loading = true);
+                              final messenger = ScaffoldMessenger.of(context);
+                              try {
+                                await ref.read(cartControllerProvider).addToCart(
+                                      produtoId: produto.id,
+                                      nome: produto.nome,
+                                      preco: produto.preco,
+                                    );
+                                if (!mounted) return;
+                                messenger.showSnackBar(
+                                  const SnackBar(content: Text('Adicionado ao carrinho')),
+                                );
+                              } on MergeConflict {
+                                if (!mounted) return;
+                                messenger.showSnackBar(
+                                  const SnackBar(content: Text('Estoque insuficiente')),
+                                );
+                              } finally {
+                                if (mounted) setState(() => _loading = false);
+                              }
+                            }
+                          : null,
+                      child: _loading
+                          ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                          : const Text('Adicionar'),
+                    ),
+                    const SizedBox(height: 8),
+                    OutlinedButton(
+                      style: OutlinedButton.styleFrom(minimumSize: btnMinSize, padding: pad),
+                      onPressed: () => context.push('/produto/${produto.id}'),
+                      child: const Text('Ver'),
+                    ),
+                  ],
+                );
+              }
+              return Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(minWidth: 120, maxWidth: 220),
+                    child: FilledButton(
+                      style: FilledButton.styleFrom(minimumSize: btnMinSize, padding: pad),
                     onPressed: (!_loading && produto.estoque > 0)
                         ? () async {
                             setState(() => _loading = true);
+                            final messenger = ScaffoldMessenger.of(context);
                             try {
                               await ref.read(cartControllerProvider).addToCart(
                                     produtoId: produto.id,
@@ -320,12 +412,12 @@ class _ProductCardState extends ConsumerState<_ProductCard> {
                                     preco: produto.preco,
                                   );
                               if (!mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              messenger.showSnackBar(
                                 const SnackBar(content: Text('Adicionado ao carrinho')),
                               );
                             } on MergeConflict {
                               if (!mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              messenger.showSnackBar(
                                 const SnackBar(content: Text('Estoque insuficiente')),
                               );
                             } finally {
@@ -343,17 +435,19 @@ class _ProductCardState extends ConsumerState<_ProductCard> {
                               Text('Adicionar'),
                             ],
                           ),
+                    ),
                   ),
-                ),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(minWidth: 120, maxWidth: 220),
-                  child: OutlinedButton(
-                    onPressed: () => context.push('/produto/${produto.id}'),
-                    child: const Text('Ver'),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(minWidth: 120, maxWidth: 220),
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(minimumSize: btnMinSize, padding: pad),
+                      onPressed: () => context.push('/produto/${produto.id}'),
+                      child: const Text('Ver'),
+                    ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              );
+            }),
           ],
         ),
       ),

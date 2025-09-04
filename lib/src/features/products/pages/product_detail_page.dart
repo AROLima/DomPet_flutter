@@ -153,11 +153,11 @@ class _DetailState extends ConsumerState<_Detail> {
                   p.estoque > 0 ? Icons.check_circle : Icons.schedule,
                   color: p.estoque > 0 ? (isDark ? Colors.white : scheme.onSecondary) : (isDark ? scheme.onErrorContainer : scheme.onSurface),
                 ),
-                side: BorderSide(color: scheme.outline.withOpacity(0.4)),
+        side: BorderSide(color: scheme.outline.withValues(alpha: 0.4)),
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
                 backgroundColor: p.estoque > 0
-                    ? (isDark ? scheme.secondary.withOpacity(0.6) : scheme.secondary.withOpacity(0.18))
-                    : (isDark ? scheme.errorContainer.withOpacity(0.6) : scheme.surfaceContainerHighest),
+          ? (isDark ? scheme.secondary.withValues(alpha: 0.6) : scheme.secondary.withValues(alpha: 0.18))
+          : (isDark ? scheme.errorContainer.withValues(alpha: 0.6) : scheme.surfaceContainerHighest),
               ),
             ],
           ),
@@ -184,6 +184,7 @@ class _DetailState extends ConsumerState<_Detail> {
                   onPressed: (p.estoque > 0 && !_adding)
                       ? () async {
                           setState(() => _adding = true);
+                          final messenger = ScaffoldMessenger.of(context);
                           try {
                             await ref.read(cartControllerProvider).addToCart(
                                   produtoId: p.id,
@@ -192,10 +193,10 @@ class _DetailState extends ConsumerState<_Detail> {
                                   quantidade: _qty,
                                 );
                             if (!mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Adicionado ao carrinho')));
+                            messenger.showSnackBar(const SnackBar(content: Text('Adicionado ao carrinho')));
                           } on MergeConflict {
                             if (!mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Estoque insuficiente')));
+                            messenger.showSnackBar(const SnackBar(content: Text('Estoque insuficiente')));
                           } finally {
                             if (mounted) setState(() => _adding = false);
                           }

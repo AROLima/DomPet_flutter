@@ -42,9 +42,12 @@ class ProfilePage extends ConsumerWidget {
         leading: IconButton(
           tooltip: 'Início',
           icon: const Icon(Icons.home_outlined),
-          onPressed: () => Navigator.of(context).maybePop().then((popped) {
-            if (!(popped ?? false)) context.go('/');
-          }),
+          onPressed: () {
+            final router = GoRouter.of(context);
+            Navigator.of(context).maybePop().then((popped) {
+              if (!popped) router.go('/');
+            });
+          },
         ),
         title: const Text('Perfil'),
       ),

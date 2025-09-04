@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:flutter/services.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../src/features/products/products_service.dart';
 import '../../../src/shared/models/page_result.dart';
@@ -50,7 +49,7 @@ class _AdminProdutosPageState extends ConsumerState<AdminProdutosPage> {
         String? loc;
         final r = Router.maybeOf(context);
         if (r?.routeInformationProvider case final p?) {
-          loc = p.value.location;
+          loc = p.value.uri.toString();
         }
         loc ??= Uri.base.toString();
         final uri = Uri.parse(loc);
@@ -186,7 +185,20 @@ class _AdminProdutosPageState extends ConsumerState<AdminProdutosPage> {
                 data: (page) => LayoutBuilder(
                   builder: (context, c) {
                     final wide = c.maxWidth >= AppBreakpoints.sm;
-                    return wide ? _TableView(page: page, deletingId: controller.deletingId) : _CardsView(page: page, deletingId: controller.deletingId);
+                    if (wide) {
+                      return _TableView(
+                        page: page,
+                        deletingId: controller.deletingId,
+                        sortColumnIndex: _sortColumnIndex,
+                        sortAscending: _sortAsc,
+                        onSort: (i, asc) => setState(() {
+                          _sortColumnIndex = i;
+                          _sortAsc = asc;
+                          _page = 0;
+                        }),
+                      );
+                    }
+                    return _CardsView(page: page, deletingId: controller.deletingId);
                   },
                 ),
                 loading: () => const Center(child: CircularProgressIndicator()),
@@ -242,19 +254,22 @@ class _Paginator extends StatelessWidget {
 }
 
 class _TableView extends ConsumerWidget {
-  const _TableView({required this.page, required this.deletingId});
+  const _TableView({required this.page, required this.deletingId, required this.onSort, required this.sortColumnIndex, required this.sortAscending});
   final PageResult<Produto> page;
   final int? deletingId;
+  final void Function(int columnIndex, bool ascending) onSort;
+  final int? sortColumnIndex;
+  final bool sortAscending;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final rows = <DataRow>[];
     for (var i = 0; i < page.content.length; i++) {
       final p = page.content[i];
-      final bg = i.isEven ? scheme.surfaceContainerHighest.withOpacity(0.06) : Colors.transparent;
+    final bg = i.isEven ? scheme.surfaceContainerHighest.withValues(alpha: 0.06) : Colors.transparent;
       rows.add(
         DataRow(
-          color: MaterialStatePropertyAll<Color>(bg),
+      color: WidgetStatePropertyAll<Color>(bg),
           cells: [
             DataCell(
               Padding(
@@ -326,44 +341,23 @@ class _TableView extends ConsumerWidget {
               dataRowMaxHeight: 68,
               columnSpacing: 32,
               headingTextStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
-              sortColumnIndex: context.findAncestorStateOfType<_AdminProdutosPageState>()?._sortColumnIndex,
-              sortAscending: context.findAncestorStateOfType<_AdminProdutosPageState>()?._sortAsc ?? true,
+              sortColumnIndex: sortColumnIndex,
+              sortAscending: sortAscending,
               columns: [
                 const DataColumn(label: Text('Imagem')),
                 DataColumn(
                   label: const Text('Nome'),
-                  onSort: (i, asc) {
-                    final s = context.findAncestorStateOfType<_AdminProdutosPageState>();
-                    s?.setState(() {
-                      s._sortColumnIndex = i;
-                      s._sortAsc = asc;
-                      s._page = 0;
-                    });
-                  },
+                  onSort: (i, asc) => onSort(i, asc),
                 ),
                 DataColumn(
                   numeric: true,
                   label: const Text('Preço'),
-                  onSort: (i, asc) {
-                    final s = context.findAncestorStateOfType<_AdminProdutosPageState>();
-                    s?.setState(() {
-                      s._sortColumnIndex = i;
-                      s._sortAsc = asc;
-                      s._page = 0;
-                    });
-                  },
+                  onSort: (i, asc) => onSort(i, asc),
                 ),
                 DataColumn(
                   numeric: true,
                   label: const Text('Estoque'),
-                  onSort: (i, asc) {
-                    final s = context.findAncestorStateOfType<_AdminProdutosPageState>();
-                    s?.setState(() {
-                      s._sortColumnIndex = i;
-                      s._sortAsc = asc;
-                      s._page = 0;
-                    });
-                  },
+                  onSort: (i, asc) => onSort(i, asc),
                 ),
                 const DataColumn(label: Text('Ações')),
               ],
@@ -438,7 +432,7 @@ class _RowActions extends ConsumerWidget {
   final bool deleting;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final notifier = ref.read(adminProdutoControllerProvider.notifier);
+  // actions read notifier lazily inside callbacks where needed
     return ConstrainedBox(
       constraints: const BoxConstraints(minWidth: 120, maxWidth: 220),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -469,56 +463,9 @@ class _RowActions extends ConsumerWidget {
     );
   }
 
-  Future<bool?> _confirmDelete(BuildContext context) async {
-    return showDialog<bool>(
-      context: context,
-      builder: (context) {
-        return _ConfirmDialog(
-          title: 'Excluir produto?',
-          message: 'Esta ação pode ser irreversível. Deseja continuar?',
-          confirmText: 'Excluir',
-          cancelText: 'Cancelar',
-        );
-      },
-    );
-  }
+  // confirm dialog now handled in dedicated route /admin/produtos/:id/excluir
 }
 
-class _ConfirmDialog extends StatelessWidget {
-  const _ConfirmDialog({required this.title, required this.message, required this.confirmText, required this.cancelText});
-  final String title;
-  final String message;
-  final String confirmText;
-  final String cancelText;
-  @override
-  Widget build(BuildContext context) {
-    return Shortcuts(
-      shortcuts: <ShortcutActivator, Intent>{
-        const SingleActivator(LogicalKeyboardKey.enter): const ActivateIntent(),
-        const SingleActivator(LogicalKeyboardKey.escape): const DismissIntent(),
-      },
-      child: Actions(
-        actions: <Type, Action<Intent>>{
-          ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: (intent) {
-            Navigator.of(context).pop(true);
-            return null;
-          }),
-          DismissIntent: CallbackAction<DismissIntent>(onInvoke: (intent) {
-            Navigator.of(context).pop(false);
-            return null;
-          }),
-        },
-        child: AlertDialog(
-          title: Text(title),
-          content: Text(message),
-          actions: [
-            TextButton(onPressed: () => Navigator.of(context).pop(false), child: Text(cancelText)),
-            FilledButton.tonalIcon(icon: const Icon(Icons.delete), onPressed: () => Navigator.of(context).pop(true), label: Text(confirmText)),
-          ],
-        ),
-      ),
-    );
-  }
-}
+// Removed unused local dialog; delete confirmation handled via dedicated route
 
 // Drawer moved to shared AdminDrawer

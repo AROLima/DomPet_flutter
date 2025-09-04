@@ -58,7 +58,7 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
                     final p = page.content[i];
                     return ListTile(
                       title: Text('Pedido #${p.id} - ${p.status}'),
-                      subtitle: Text('Total: R\$ ' + p.total.toStringAsFixed(2)),
+                      subtitle: Text('Total: R\$ ${p.total.toStringAsFixed(2)}'),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () => context.push('/pedidos/${p.id}'),
                     );

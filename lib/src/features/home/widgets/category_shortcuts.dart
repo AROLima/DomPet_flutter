@@ -190,7 +190,7 @@ class _CatCard extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final sel = selected;
-    final selectedBg = isDark ? scheme.secondary.withOpacity(0.45) : scheme.secondary.withOpacity(0.12);
+  final selectedBg = isDark ? scheme.secondary.withValues(alpha: 0.45) : scheme.secondary.withValues(alpha: 0.12);
     final selectedFg = isDark ? Colors.white : scheme.onSecondary;
     return Material(
       color: sel ? selectedBg : scheme.surface,
@@ -205,7 +205,7 @@ class _CatCard extends StatelessWidget {
             // Expanded/Infinity conflicts and let children take only what they need.
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 24, color: sel ? selectedFg : scheme.onSurface.withOpacity(0.9)),
+              Icon(icon, size: 24, color: sel ? selectedFg : scheme.onSurface.withValues(alpha: 0.9)),
               const SizedBox(width: 12),
               Flexible(
                 fit: FlexFit.loose,

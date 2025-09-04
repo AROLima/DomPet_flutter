@@ -13,6 +13,7 @@
 // Notes:
 // - Keep service methods small and deterministic so they are easy to unit-test.
 
+import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -103,7 +104,13 @@ class ProductsService {
 }
 
 // Providers used by UI layers: categories, search and detail providers.
-final categoriasProvider = FutureProvider.autoDispose<List<String>>((ref) => ref.read(productsServiceProvider).getCategorias());
+final categoriasProvider = FutureProvider.autoDispose<List<String>>((ref) async {
+  // Keep categories cached in memory for 1 hour to pair with server caching
+  final link = ref.keepAlive();
+  final timer = Timer(const Duration(hours: 1), link.close);
+  ref.onDispose(timer.cancel);
+  return ref.read(productsServiceProvider).getCategorias();
+});
 
 @immutable
 class ProductsQuery {

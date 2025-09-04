@@ -15,6 +15,7 @@
 
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../cart/cart_service.dart';
@@ -40,6 +41,7 @@ class _FeaturedCarouselState extends ConsumerState<FeaturedCarousel> {
   double _viewport = 0.92;
   int _index = 0;
   Timer? _auto;
+  Timer? _unpause;
   int _count = 0;
   bool _paused = false;
   Future<List<Produto>>? _future;
@@ -47,6 +49,7 @@ class _FeaturedCarouselState extends ConsumerState<FeaturedCarousel> {
   @override
   void dispose() {
     _auto?.cancel();
+  _unpause?.cancel();
     _controller.dispose();
     super.dispose();
   }
@@ -92,7 +95,8 @@ class _FeaturedCarouselState extends ConsumerState<FeaturedCarousel> {
         for (final p in page.content) {
           if (ids.contains(p.id)) merged[p.id] = p;
         }
-        if (merged.isNotEmpty) return merged.values.toList();
+        final list = merged.values.toList();
+        if (list.length >= 2) return list;
       }
     } catch (_) {}
 
@@ -106,17 +110,28 @@ class _FeaturedCarouselState extends ConsumerState<FeaturedCarousel> {
         for (final p in page.content) {
           if (seen.add(p.id)) distinct.add(p);
         }
-        return distinct;
+        if (distinct.length >= 2) return distinct;
       }
     } catch (_) {}
 
     // 3) Last fallback: getAll (up to 8 items)
     try {
       final all = await service.getAll();
-      return all.take(8).toList();
+      final list = all.take(8).toList();
+      if (list.length >= 2) return list;
     } catch (_) {
-      return [];
+      // ignore
     }
+
+    // 4) Ensure carousel has at least 2 slides: duplicate single item if needed
+    try {
+      final page = await service.search(page: 0, size: 2, categoria: widget.category);
+      final items = page.content.take(2).toList();
+      if (items.length == 1) return [items.first, items.first];
+      if (items.length >= 2) return items;
+    } catch (_) {}
+
+    return [];
   }
 
   @override
@@ -138,14 +153,21 @@ class _FeaturedCarouselState extends ConsumerState<FeaturedCarousel> {
           final aspect = heroAspectFor(w);
           // On very narrow viewports, use a fuller fraction to give more width per slide
           final targetVf = constraints.maxWidth < 380 ? 0.98 : 0.92;
-          if (targetVf != _viewport) {
-            // Swap controller preserving page when viewport changes
-            final old = _controller;
-            _viewport = targetVf;
-            _controller = PageController(viewportFraction: _viewport, keepPage: true, initialPage: _index);
-            old.dispose();
-          }
+          // Keep controller stable to avoid runtime glitches; ignore minor viewport changes.
+          _viewport = targetVf;
           final hasMultiple = items.length > 1;
+          // Ensure current index is valid for the current item count
+          final desiredIndex = items.isEmpty ? 0 : _index.clamp(0, items.length - 1);
+          if (desiredIndex != _index) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) return;
+              _index = desiredIndex;
+              if (_controller.hasClients) {
+                try { _controller.jumpToPage(_index); } catch (_) {}
+              }
+              setState(() {});
+            });
+          }
           // Update autoplay source count and restart if it changed
           if (_count != items.length) {
             _count = items.length;
@@ -165,23 +187,34 @@ class _FeaturedCarouselState extends ConsumerState<FeaturedCarousel> {
                           onNotification: (n) {
                             if (n is ScrollStartNotification) {
                               _paused = true;
+                              _unpause?.cancel();
+                              // Fallback: ensure autoplay resumes even if End isn't delivered
+                              _unpause = Timer(const Duration(milliseconds: 1200), () {
+                                if (mounted) setState(() => _paused = false);
+                              });
                             } else if (n is ScrollEndNotification) {
+                              _unpause?.cancel();
                               _paused = false;
                             }
                             return false;
                           },
-                          child: PageView.builder(
-                            controller: _controller,
-                            physics: const PageScrollPhysics(),
-                            onPageChanged: (i) => setState(() => _index = i),
-                            itemCount: items.length,
-                            itemBuilder: (ctx, i) {
-                              final p = items[i];
-                              return Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 8),
-                                child: _SlideCard(key: ValueKey('feat_${p.id}'), product: p),
-                              );
-                            },
+                          child: ScrollConfiguration(
+                            behavior: const MaterialScrollBehavior().copyWith(
+                              dragDevices: {PointerDeviceKind.touch, PointerDeviceKind.mouse},
+                            ),
+                            child: PageView.builder(
+                              controller: _controller,
+                              physics: const PageScrollPhysics(),
+                              onPageChanged: (i) => setState(() => _index = i),
+                              itemCount: items.length,
+                              itemBuilder: (ctx, i) {
+                                final p = items[i];
+                                return Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                                  child: _SlideCard(key: ValueKey('feat_${p.id}'), product: p),
+                                );
+                              },
+                            ),
                           ),
                         ),
                         if (hasMultiple)
@@ -194,8 +227,11 @@ class _FeaturedCarouselState extends ConsumerState<FeaturedCarousel> {
                             child: IconButton.filledTonal(
                               tooltip: 'Anterior',
                               onPressed: () {
+                                if (!_controller.hasClients || items.isEmpty) return;
                                 final prev = (_index - 1) < 0 ? items.length - 1 : _index - 1;
-                                _controller.animateToPage(prev, duration: const Duration(milliseconds: 280), curve: Curves.easeOut);
+                                try {
+                                  _controller.animateToPage(prev, duration: const Duration(milliseconds: 280), curve: Curves.easeOut);
+                                } catch (_) {}
                               },
                               icon: const Icon(Icons.chevron_left),
                             ),
@@ -211,8 +247,11 @@ class _FeaturedCarouselState extends ConsumerState<FeaturedCarousel> {
                             child: IconButton.filledTonal(
                               tooltip: 'Próximo',
                               onPressed: () {
+                                if (!_controller.hasClients || items.isEmpty) return;
                                 final next = (_index + 1) % items.length;
-                                _controller.animateToPage(next, duration: const Duration(milliseconds: 280), curve: Curves.easeOut);
+                                try {
+                                  _controller.animateToPage(next, duration: const Duration(milliseconds: 280), curve: Curves.easeOut);
+                                } catch (_) {}
                               },
                               icon: const Icon(Icons.chevron_right),
                             ),
@@ -256,7 +295,7 @@ class _SlideCard extends ConsumerWidget {
               cacheWidth: 1600,
               cacheHeight: 800,
               errorBuilder: (context, error, stack) => Container(
-                color: Theme.of(context).colorScheme.surfaceVariant,
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
                 alignment: Alignment.center,
                 child: const Icon(Icons.pets),
               ),

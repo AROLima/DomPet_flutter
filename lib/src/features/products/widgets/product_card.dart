@@ -46,130 +46,158 @@ class _ProductCardState extends ConsumerState<ProductCard> {
         onTap: widget.onView,
         borderRadius: BorderRadius.circular(12),
         mouseCursor: SystemMouseCursors.click,
-        focusColor: Theme.of(context).colorScheme.primary.withOpacity(0.08),
-        hoverColor: Theme.of(context).colorScheme.primary.withOpacity(0.04),
+  focusColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
+  hoverColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.04),
         child: Card(
           margin: EdgeInsets.zero,
           clipBehavior: Clip.antiAlias,
-          child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: LayoutBuilder(builder: (context, constraints) {
+          child: LayoutBuilder(
+            builder: (context, constraints) {
               final tight = constraints.maxWidth < 220;
-              return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                AspectRatio(
-                  aspectRatio: 4 / 3,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: p.imagemUrl != null
-                        ? Image.network(
-                            p.imagemUrl!,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stack) => Container(
-                              color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                              alignment: Alignment.center,
-                              child: const Icon(Icons.pets),
+              final veryTight = constraints.maxHeight < 220 || constraints.maxWidth < 140;
+              return Padding(
+                padding: EdgeInsets.symmetric(horizontal: 8, vertical: veryTight ? 4 : 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AspectRatio(
+                      aspectRatio: veryTight ? 16 / 9 : 16 / 11,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: p.imagemUrl != null
+                            ? Image.network(
+                                p.imagemUrl!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stack) => Container(
+                                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                                  alignment: Alignment.center,
+                                  child: const Icon(Icons.pets),
+                                ),
+                              )
+                            : Container(
+                                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                                alignment: Alignment.center,
+                                child: const Icon(Icons.pets),
+                              ),
+                      ),
+                    ),
+                    SizedBox(height: veryTight ? 3 : 8),
+                    Text(
+                      p.nome,
+                      maxLines: veryTight ? 1 : 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: (veryTight
+                              ? Theme.of(context).textTheme.titleSmall
+                              : Theme.of(context).textTheme.titleMedium)
+                          ?.copyWith(height: veryTight ? 1.1 : null),
+                    ),
+                    SizedBox(height: veryTight ? 2 : 4),
+                    Text(
+                      formatBrl(p.preco),
+                      style: (veryTight
+                              ? Theme.of(context).textTheme.titleSmall
+                              : Theme.of(context).textTheme.titleMedium)
+                          ?.copyWith(height: veryTight ? 1.0 : null),
+                    ),
+                    if (!veryTight) const Spacer() else SizedBox(height: tight ? 3 : 6),
+                    if (tight)
+                      Row(
+                        children: [
+                          Expanded(
+                            child: FilledButton(
+                              style: FilledButton.styleFrom(
+                                minimumSize: Size(0, veryTight ? 26 : 36),
+                                padding: EdgeInsets.symmetric(horizontal: 10, vertical: veryTight ? 5 : 10),
+                              ),
+                              onPressed: (_loading || p.estoque <= 0)
+                                  ? null
+                                  : () async {
+                                      setState(() => _loading = true);
+                                      final messenger = ScaffoldMessenger.of(context);
+                                      try {
+                                        await ref.read(cartControllerProvider).addToCart(
+                                              produtoId: p.id,
+                                              nome: p.nome,
+                                              preco: p.preco,
+                                            );
+                                        if (!mounted) return;
+                                        messenger.showSnackBar(const SnackBar(content: Text('Adicionado ao carrinho')));
+                                      } on MergeConflict {
+                                        if (!mounted) return;
+                                        messenger.showSnackBar(const SnackBar(content: Text('Estoque insuficiente')));
+                                      } finally {
+                                        if (mounted) setState(() => _loading = false);
+                                      }
+                                    },
+                              child: _loading
+                                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                                  : const Text('Adicionar'),
                             ),
-                          )
-                        : Container(
-                            color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                            alignment: Alignment.center,
-                            child: const Icon(Icons.pets),
                           ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  p.nome,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 4),
-                Text(formatBrl(p.preco), style: Theme.of(context).textTheme.titleMedium),
-                const Spacer(),
-                if (tight)
-                  Row(
-                    children: [
-                      Expanded(
-                        child: FilledButton(
-                          onPressed: (_loading || p.estoque <= 0)
-                              ? null
-                              : () async {
-                                  setState(() => _loading = true);
-                                  try {
-                                    await ref.read(cartControllerProvider).addToCart(
-                                          produtoId: p.id,
-                                          nome: p.nome,
-                                          preco: p.preco,
-                                        );
-                                    if (!mounted) return;
-                                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Adicionado ao carrinho')));
-                                  } on MergeConflict {
-                                    if (!mounted) return;
-                                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Estoque insuficiente')));
-                                  } finally {
-                                    if (mounted) setState(() => _loading = false);
-                                  }
-                                },
-                          child: _loading
-                              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                              : const Text('Adicionar'),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        onPressed: widget.onView,
-                        icon: const Icon(Icons.chevron_right),
-                        tooltip: 'Ver',
+                          SizedBox(width: veryTight ? 6 : 8),
+                          IconButton(
+                            onPressed: widget.onView,
+                            icon: const Icon(Icons.chevron_right),
+                            tooltip: 'Ver',
+                            visualDensity: const VisualDensity(horizontal: -2, vertical: -2),
+                            constraints: BoxConstraints.tightFor(width: veryTight ? 30 : 40, height: veryTight ? 24 : 36),
+                          )
+                        ],
                       )
-                    ],
-                  )
-                else
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      SizedBox(
-                        width: 160,
-                        child: FilledButton(
-                          onPressed: (_loading || p.estoque <= 0)
-                              ? null
-                              : () async {
-                                  setState(() => _loading = true);
-                                  try {
-                                    await ref.read(cartControllerProvider).addToCart(
-                                          produtoId: p.id,
-                                          nome: p.nome,
-                                          preco: p.preco,
-                                        );
-                                    if (!mounted) return;
-                                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Adicionado ao carrinho')));
-                                  } on MergeConflict {
-                                    if (!mounted) return;
-                                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Estoque insuficiente')));
-                                  } finally {
-                                    if (mounted) setState(() => _loading = false);
-                                  }
-                                },
-                          child: _loading
-                              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                              : const Text('Adicionar'),
-                        ),
+                    else
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          SizedBox(
+                            width: 160,
+                            child: FilledButton(
+                              style: FilledButton.styleFrom(
+                                minimumSize: const Size(0, 38),
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              ),
+                              onPressed: (_loading || p.estoque <= 0)
+                                  ? null
+                                  : () async {
+                                      setState(() => _loading = true);
+                                      final messenger = ScaffoldMessenger.of(context);
+                                      try {
+                                        await ref.read(cartControllerProvider).addToCart(
+                                              produtoId: p.id,
+                                              nome: p.nome,
+                                              preco: p.preco,
+                                            );
+                                        if (!mounted) return;
+                                        messenger.showSnackBar(const SnackBar(content: Text('Adicionado ao carrinho')));
+                                      } on MergeConflict {
+                                        if (!mounted) return;
+                                        messenger.showSnackBar(const SnackBar(content: Text('Estoque insuficiente')));
+                                      } finally {
+                                        if (mounted) setState(() => _loading = false);
+                                      }
+                                    },
+                              child: _loading
+                                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                                  : const Text('Adicionar'),
+                            ),
+                          ),
+                          SizedBox(
+                            width: 120,
+                            child: OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                minimumSize: const Size(0, 38),
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              ),
+                              onPressed: widget.onView,
+                              child: const Text('Ver'),
+                            ),
+                          ),
+                        ],
                       ),
-                      SizedBox(
-                        width: 120,
-                        child: OutlinedButton(
-                          onPressed: widget.onView,
-                          child: const Text('Ver'),
-                        ),
-                      ),
-                    ],
-                  ),
-              ],
-            );
-            }),
+                  ],
+                ),
+              );
+            },
           ),
         ),
       ),

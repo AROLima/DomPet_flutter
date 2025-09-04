@@ -3,7 +3,6 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../design_system.dart';
 import '../../src/features/cart/cart_service.dart';
-import '../../src/core/auth/session.dart';
 import 'app_drawer.dart';
 
 class ResponsiveScaffold extends ConsumerWidget {

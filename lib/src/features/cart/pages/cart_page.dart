@@ -72,14 +72,16 @@ class _CartPageState extends ConsumerState<CartPage> {
         actions: [
           TextButton.icon(
             onPressed: () async {
+              // Capture messenger before any awaits to avoid using BuildContext across async gaps
+              final messenger = ScaffoldMessenger.of(context);
               final confirm = await showDialog<bool>(
                 context: context,
-                builder: (context) => AlertDialog(
+                builder: (dialogCtx) => AlertDialog(
                   title: const Text('Limpar carrinho'),
                   content: const Text('Remover todos os itens?'),
                   actions: [
-                    TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
-                    FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Limpar')),
+                    TextButton(onPressed: () => Navigator.of(dialogCtx).pop(false), child: const Text('Cancelar')),
+                    FilledButton(onPressed: () => Navigator.of(dialogCtx).pop(true), child: const Text('Limpar')),
                   ],
                 ),
               );
@@ -87,7 +89,7 @@ class _CartPageState extends ConsumerState<CartPage> {
                 await ref.read(cartControllerProvider).clear();
                 await _reload();
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Carrinho limpo')));
+                  messenger.showSnackBar(const SnackBar(content: Text('Carrinho limpo')));
                 }
               }
             },
@@ -157,7 +159,7 @@ class _CartPageState extends ConsumerState<CartPage> {
                           ),
                         ),
                         title: Text(item.nome, maxLines: 2, overflow: TextOverflow.ellipsis),
-                        subtitle: Text('R\$ ' + item.precoUnitario.toStringAsFixed(2)),
+                        subtitle: Text('R\$ ${item.precoUnitario.toStringAsFixed(2)}'),
                         trailing: ConstrainedBox(
                           constraints: const BoxConstraints(minWidth: 168, maxWidth: 196),
                           child: Row(
@@ -226,7 +228,7 @@ class _CartPageState extends ConsumerState<CartPage> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text('Total', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
-                    Text('R\$ ' + cart.total.toStringAsFixed(2), style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
+                    Text('R\$ ${cart.total.toStringAsFixed(2)}', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
                   ],
                 ),
                 const SizedBox(height: 12),

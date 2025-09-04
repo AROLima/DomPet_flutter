@@ -22,7 +22,6 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../ui/design_system.dart';
 import '../products/products_service.dart';
-import '../cart/cart_service.dart';
 import 'widgets/featured_carousel.dart';
 import 'widgets/category_shortcuts.dart';
 import 'selected_category.dart';
@@ -83,7 +82,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       final r = Router.maybeOf(context);
       String? loc;
       if (r?.routeInformationProvider case final p?) {
-        loc = p.value.location;
+        loc = p.value.uri.toString();
       }
       loc ??= Uri.base.toString();
       final uri = Uri.parse(loc);
@@ -129,7 +128,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
                         onDeleted: () => ref.read(selectedCategoryProvider.notifier).state = null,
                         deleteIcon: const Icon(Icons.close),
                         deleteIconColor: Theme.of(context).colorScheme.onSecondaryContainer,
-                        side: BorderSide(color: Theme.of(context).colorScheme.outline.withOpacity(0.3)),
+                        side: BorderSide(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3)),
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
                       ),
                     ],

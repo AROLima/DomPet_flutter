@@ -198,16 +198,31 @@ class _EtagInterceptor extends Interceptor {
   _EtagInterceptor(this.ref);
   final Ref ref;
 
-  bool _isProductDetail(RequestOptions options) {
-    // True when path is /produtos/{id}
-    return options.method == 'GET' && RegExp(r'^/produtos/\d+$').hasMatch(options.path);
+  bool _isProductDetail(RequestOptions options) =>
+      options.method == 'GET' && RegExp(r'^/produtos/\d+$').hasMatch(options.path);
+
+  bool _isProductsList(RequestOptions options) =>
+      options.method == 'GET' && options.path == '/produtos' && (options.queryParameters.isEmpty || options.queryParameters.isNotEmpty);
+
+  bool _isProductsSearch(RequestOptions options) =>
+      options.method == 'GET' && options.path == '/produtos/search';
+
+  bool _isProductsSuggestions(RequestOptions options) =>
+      options.method == 'GET' && options.path == '/produtos/suggestions';
+
+  String _cacheKey(RequestOptions options) {
+    if (options.queryParameters.isEmpty) return options.path;
+    final qp = Map<String, dynamic>.from(options.queryParameters);
+    final keys = qp.keys.toList()..sort();
+    final pairs = keys.map((k) => '$k=${qp[k]}').join('&');
+    return '${options.path}?$pairs';
   }
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
-    if (_isProductDetail(options)) {
+  if (_isProductDetail(options) || _isProductsList(options) || _isProductsSearch(options) || _isProductsSuggestions(options)) {
       final cache = await ref.read(etagCacheProvider.future);
-      final etag = cache.getEtag(options.path);
+      final etag = cache.getEtag(_cacheKey(options));
       if (etag != null) {
         options.headers['If-None-Match'] = etag;
       }
@@ -217,19 +232,26 @@ class _EtagInterceptor extends Interceptor {
 
   @override
   void onResponse(Response response, ResponseInterceptorHandler handler) async {
-  if (response.requestOptions.method == 'GET' && RegExp(r'^/produtos/\d+$').hasMatch(response.requestOptions.path)) {
+    final req = response.requestOptions;
+    final isCacheableGet = req.method == 'GET' && (
+      RegExp(r'^/produtos/\d+$').hasMatch(req.path) ||
+      req.path == '/produtos' ||
+      req.path == '/produtos/search' ||
+      req.path == '/produtos/suggestions'
+    );
+    if (isCacheableGet) {
       final cache = await ref.read(etagCacheProvider.future);
       final etag = response.headers.value('etag');
       if (etag != null && response.statusCode == 200) {
-        cache.save(response.requestOptions.path, etag, response.data);
+        cache.save(_cacheKey(req), etag, response.data);
       }
       if (response.statusCode == 304) {
-        final cached = cache.get(response.requestOptions.path);
+        final cached = cache.get(_cacheKey(req));
         if (cached != null) {
           return handler.resolve(Response(
             data: cached.data,
             headers: response.headers,
-            requestOptions: response.requestOptions,
+            requestOptions: req,
             statusCode: 200,
             statusMessage: 'Not Modified (served from cache)',
           ));
