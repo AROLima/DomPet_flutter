@@ -30,6 +30,7 @@ import '../../cart/cart_service.dart';
 import '../../cart/local_cart.dart' show MergeConflict;
 import '../products_service.dart';
 import '../../../../ui/widgets/responsive_scaffold.dart';
+import '../../../../ui/widgets/home_app_drawer.dart';
 import '../../../../ui/design_system.dart';
 
 // Layout switches between a row (wide) and vertical list (narrow) to make good
@@ -46,6 +47,7 @@ class ProductDetailPage extends ConsumerWidget {
 
     return ResponsiveScaffold(
       title: const Text('Produto'),
+      drawer: const HomeAppDrawer(),
       body: async.when(
         data: (p) => _Detail(p: p),
         loading: () => const Center(child: CircularProgressIndicator()),

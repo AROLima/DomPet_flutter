@@ -7,12 +7,12 @@ class AdminDrawer extends ConsumerWidget {
   const AdminDrawer({super.key});
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-  final mode = ref.watch(themeModeProvider);
-  final isDark = mode == ThemeMode.dark;
+  // Usa sempre o Theme para padronizar a cor do Drawer
+  // Usa a mesma cor do corpo do Card (AppColors.surface) no tema claro
   return Drawer(
-    backgroundColor: isDark
-      ? Theme.of(context).drawerTheme.backgroundColor ?? Theme.of(context).colorScheme.surface
-      : const Color(0xFFFFF7E9), // igual ao corpo do Card
+  backgroundColor: Theme.of(context).brightness == Brightness.light
+    ? const Color(0xFFFFF8E7)
+    : (Theme.of(context).drawerTheme.backgroundColor ?? Theme.of(context).colorScheme.surface),
     child: SafeArea(
         child: ListView(
           padding: EdgeInsets.zero,

@@ -10,12 +10,12 @@ class HomeAppDrawer extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final roles = ref.watch(sessionProvider).value?.roles ?? const <String>[];
     final isAdmin = roles.contains('ADMIN') || roles.contains('ROLE_ADMIN');
-  final mode = ref.watch(themeModeProvider);
-  final isDark = mode == ThemeMode.dark;
+  // Usa sempre o Theme para padronizar a cor do Drawer
+  // Usa a mesma cor do corpo do Card (AppColors.surface) no tema claro
   return Drawer(
-    backgroundColor: isDark
-      ? Theme.of(context).drawerTheme.backgroundColor ?? Theme.of(context).colorScheme.surface
-      : const Color(0xFFFFF7E9), // igual ao corpo do Card
+  backgroundColor: Theme.of(context).brightness == Brightness.light
+    ? const Color(0xFFFFF8E7) // cor do fundo do app
+    : (Theme.of(context).drawerTheme.backgroundColor ?? Theme.of(context).colorScheme.surface),
     child: SafeArea(
         child: ListView(
           padding: EdgeInsets.zero,
