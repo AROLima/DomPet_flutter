@@ -20,6 +20,7 @@ import '../../cart/cart_service.dart';
 import '../../cart/local_cart.dart' show MergeConflict;
 import '../../../shared/models/product.dart';
 import '../../../../ui/design_system.dart';
+import '../../../shared/widgets/product_image.dart';
 
 // Reusable product card used across home / lists.
 // Accessibility: uses InkWell + FocusTraversalGroup to keep keyboard and
@@ -60,26 +61,17 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    AspectRatio(
+                    // Reverted to original aspect ratios with explicit contain fit.
+                    ProductImage(
+                      url: p.imagemUrl,
                       aspectRatio: veryTight ? 16 / 9 : 16 / 11,
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: p.imagemUrl != null
-                            ? Image.network(
-                                p.imagemUrl!,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stack) => Container(
-                                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                                  alignment: Alignment.center,
-                                  child: const Icon(Icons.pets),
-                                ),
-                              )
-                            : Container(
-                                color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                                alignment: Alignment.center,
-                                child: const Icon(Icons.pets),
-                              ),
-                      ),
+                      fitMode: BoxFit.contain,
+                      borderRadius: BorderRadius.circular(12),
+                      padding: EdgeInsets.all(veryTight ? 2 : 4),
+                      cacheWidth: 520,
+                      cacheHeight: 520,
+                      semanticLabel: p.nome,
+                      errorIcon: const Icon(Icons.pets),
                     ),
                     SizedBox(height: veryTight ? 3 : 8),
                     Text(

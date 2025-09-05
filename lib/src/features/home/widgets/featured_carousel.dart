@@ -17,6 +17,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import '../../../shared/widgets/product_image.dart';
 import 'package:go_router/go_router.dart';
 import '../../cart/cart_service.dart';
 import '../../cart/local_cart.dart' show MergeConflict;
@@ -288,17 +289,14 @@ class _SlideCard extends ConsumerWidget {
         children: [
           // imagem responsiva
           if (product.imagemUrl != null)
-            Image.network(
-              product.imagemUrl!,
-              fit: BoxFit.cover,
-              alignment: Alignment.center,
+            ProductImage(
+              url: product.imagemUrl,
               cacheWidth: 1600,
               cacheHeight: 800,
-              errorBuilder: (context, error, stack) => Container(
-                color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                alignment: Alignment.center,
-                child: const Icon(Icons.pets),
-              ),
+              aspectRatio: null, // fills parent
+              padding: const EdgeInsets.all(12),
+              borderRadius: BorderRadius.circular(18),
+              errorIcon: const Icon(Icons.pets, size: 72),
             )
           else
             Container(

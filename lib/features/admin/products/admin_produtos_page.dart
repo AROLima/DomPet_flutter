@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import '../../../src/shared/widgets/product_image.dart';
 import '../../../src/features/products/products_service.dart';
 import '../../../src/shared/models/page_result.dart';
 import '../../../src/shared/models/product.dart';
@@ -274,18 +275,20 @@ class _TableView extends ConsumerWidget {
             DataCell(
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8),
-                child: p.imagemUrl != null
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(6),
-                        child: Image.network(
-                          p.imagemUrl!,
-                          width: 60,
-                          height: 60,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stack) => const Icon(Icons.pets),
-                        ),
-                      )
-                    : const Icon(Icons.pets),
+                child: SizedBox(
+                  width: 56,
+                  height: 56,
+                  child: ProductImage(
+                    url: p.imagemUrl,
+                    fitMode: BoxFit.contain,
+                    borderRadius: BorderRadius.circular(6),
+                    padding: const EdgeInsets.all(4),
+                    backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    cacheWidth: 160,
+                    cacheHeight: 160,
+                    errorIcon: const Icon(Icons.pets),
+                  ),
+                ),
               ),
             ),
             DataCell(
@@ -387,19 +390,20 @@ class _CardsView extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
-                if (p.imagemUrl != null)
-                  ClipRRect(
+                SizedBox(
+                  width: 64,
+                  height: 64,
+                  child: ProductImage(
+                    url: p.imagemUrl,
+                    fitMode: BoxFit.contain,
+                    padding: const EdgeInsets.all(4),
+                    backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(6),
-                    child: Image.network(
-                      p.imagemUrl!,
-                      width: 60,
-                      height: 60,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stack) => const Icon(Icons.pets),
-                    ),
-                  )
-                else
-                  const Icon(Icons.pets),
+                    cacheWidth: 160,
+                    cacheHeight: 160,
+                    errorIcon: const Icon(Icons.pets),
+                  ),
+                ),
                 const SizedBox(width: 14),
                 Expanded(child: Text(p.nome, style: Theme.of(context).textTheme.titleMedium)),
                 Text(formatBrl(p.preco), style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),

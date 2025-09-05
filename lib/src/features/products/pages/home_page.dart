@@ -34,6 +34,7 @@ import '../products_service.dart';
 import '../../../../ui/widgets/responsive_scaffold.dart';
 import '../../../../ui/design_system.dart';
 import '../../home/widgets/featured_carousel.dart';
+import '../../../shared/widgets/product_image.dart';
 
 // Key behaviors:
 // - debounce search input to avoid too many requests
@@ -165,21 +166,20 @@ class _HomePageState extends ConsumerState<HomePage> {
                     decoration: const InputDecoration(
                       prefixIcon: Icon(Icons.search),
                       hintText: 'O que seu pet precisa?',
-                      isDense: false,
                       contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                       border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
                     ),
                     onSubmitted: (_) => setState(() => _page = 0),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
                   catsAsync.when(
                     data: (cats) => DropdownButtonFormField<String?>(
                       isExpanded: true,
                       value: _categoria,
                       decoration: const InputDecoration(
-                        isDense: false,
                         contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                        hintText: 'Categoria',
+                        prefixIcon: Icon(Icons.category_outlined),
+                        labelText: 'Categoria',
                       ),
                       items: [
                         const DropdownMenuItem<String?>(value: null, child: Text('Todas')),
@@ -315,26 +315,17 @@ class _ProductCardState extends ConsumerState<_ProductCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            AspectRatio(
+            // Reverted to original aspect ratio with explicit contain fit.
+            ProductImage(
+              url: produto.imagemUrl,
               aspectRatio: 16 / 11,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: produto.imagemUrl != null
-                    ? Image.network(
-                        produto.imagemUrl!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stack) => Container(
-                          color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                          alignment: Alignment.center,
-                          child: const Icon(Icons.pets),
-                        ),
-                      )
-                    : Container(
-                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                        alignment: Alignment.center,
-                        child: const Icon(Icons.pets),
-                      ),
-              ),
+              fitMode: BoxFit.contain,
+              borderRadius: BorderRadius.circular(12),
+              padding: const EdgeInsets.all(6),
+              cacheWidth: 520,
+              cacheHeight: 520,
+              semanticLabel: produto.nome,
+              errorIcon: const Icon(Icons.pets),
             ),
             const SizedBox(height: 8),
             Text(

@@ -26,6 +26,7 @@ import 'package:go_router/go_router.dart';
 import '../../../shared/models/cart.dart';
 import '../../cart/cart_service.dart';
 import '../../products/products_service.dart';
+import '../../../shared/widgets/product_image.dart';
 
 class CartPage extends ConsumerStatefulWidget {
   const CartPage({super.key});
@@ -129,20 +130,22 @@ class _CartPageState extends ConsumerState<CartPage> {
                               data: (p) {
                                 final url = p.imagemUrl;
                                 if (url != null && url.isNotEmpty) {
-                                  return Image.network(
-                                    url,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stack) => Container(
-                                      color: Theme.of(context).colorScheme.secondaryContainer,
-                                      alignment: Alignment.center,
-                                      child: const Icon(Icons.pets, color: Colors.white),
-                                    ),
+                                  return ProductImage(
+                                    url: url,
+                                    circular: true,
+                                    padding: const EdgeInsets.all(2),
+                                    backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
+                                    errorIcon: const Icon(Icons.pets, color: Colors.white),
+                                    cacheWidth: 160,
+                                    cacheHeight: 160,
                                   );
                                 }
-                                return Container(
-                                  color: Theme.of(context).colorScheme.secondaryContainer,
-                                  alignment: Alignment.center,
-                                  child: const Icon(Icons.pets, color: Colors.white),
+                                return ProductImage(
+                                  url: null,
+                                  circular: true,
+                                  padding: const EdgeInsets.all(2),
+                                  backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
+                                  errorIcon: const Icon(Icons.pets, color: Colors.white),
                                 );
                               },
                               loading: () => Container(

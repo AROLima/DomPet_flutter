@@ -81,12 +81,19 @@ class _Body extends ConsumerWidget {
             Row(
               children: [
                 prod.imagemUrl != null
-                    ? Image.network(
-                        prod.imagemUrl!,
+                    ? Container(
                         width: 72,
                         height: 72,
-                        fit: BoxFit.cover,
-            errorBuilder: (context, error, stack) => const Icon(Icons.pets, size: 48),
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Image.network(
+                          prod.imagemUrl!,
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stack) => const Icon(Icons.pets, size: 48),
+                        ),
                       )
           : const Icon(Icons.pets, size: 48),
                 const SizedBox(width: 16),
