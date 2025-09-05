@@ -104,7 +104,11 @@ class _ProductImageState extends State<ProductImage> {
   Widget build(BuildContext context) {
     final url = widget.url;
     final borderRadius = widget.borderRadius ?? (widget.circular ? BorderRadius.circular(1000) : BorderRadius.circular(12));
-    final bg = widget.backgroundColor ?? Theme.of(context).colorScheme.surfaceContainerHighest;
+  final theme = Theme.of(context);
+  final isLight = theme.brightness == Brightness.light;
+  final bg = widget.backgroundColor ?? (isLight
+    ? const Color(0xFFF3E9DC) // matches AppColors.neutralContainer
+    : theme.colorScheme.surfaceContainerHighest);
 
     Widget child;
     if (url == null || url.isEmpty) {

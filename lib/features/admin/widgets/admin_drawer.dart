@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
+import '../../../src/core/theme/theme_mode_provider.dart';
 
-class AdminDrawer extends StatelessWidget {
+class AdminDrawer extends ConsumerWidget {
   const AdminDrawer({super.key});
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Drawer(
       child: SafeArea(
         child: ListView(
@@ -30,6 +32,16 @@ class AdminDrawer extends StatelessWidget {
               onTap: () => context.go('/admin/produtos/novo'),
             ),
             const Divider(),
+            Consumer(builder: (context, ref, _) {
+              final mode = ref.watch(themeModeProvider);
+              final isDark = mode == ThemeMode.dark;
+              return ListTile(
+                leading: Icon(isDark ? Icons.dark_mode : Icons.light_mode),
+                title: Text(isDark ? 'Modo escuro' : 'Modo claro'),
+                subtitle: const Text('Alternar tema'),
+                onTap: () => ref.read(themeModeProvider.notifier).toggle(),
+              );
+            }),
             ListTile(
               leading: const Icon(Icons.edit),
               title: const Text('Editar produto...'),

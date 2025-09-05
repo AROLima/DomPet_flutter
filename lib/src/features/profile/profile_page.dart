@@ -25,6 +25,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/http/api_client.dart';
 import '../../core/auth/session.dart';
+import '../../core/theme/theme_mode_provider.dart';
 
 final profileProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   final dio = ref.read(dioProvider);
@@ -60,6 +61,23 @@ class ProfilePage extends ConsumerWidget {
               title: Text(json['nome']?.toString() ?? ''),
               subtitle: Text(json['email']?.toString() ?? ''),
             ),
+            const SizedBox(height: 8),
+            // Theme toggle (agora alterna apenas Claro / Escuro)
+            Consumer(builder: (context, ref, _) {
+              final mode = ref.watch(themeModeProvider);
+              final isDark = mode == ThemeMode.dark;
+              final subtitle = isDark ? 'Modo escuro ativo' : 'Modo claro ativo';
+              final icon = isDark ? Icons.dark_mode : Icons.light_mode;
+              return ListTile(
+                leading: Icon(icon),
+                title: const Text('Tema (Light/Dark)'),
+                subtitle: Text(subtitle),
+                trailing: FilledButton.tonal(
+                  onPressed: () => ref.read(themeModeProvider.notifier).toggle(),
+                  child: Text(isDark ? 'Claro' : 'Escuro'),
+                ),
+              );
+            }),
             const SizedBox(height: 8),
             if (json['role'] != null)
               ListTile(

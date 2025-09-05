@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'router.dart';
 import '../ui/design_system.dart';
+import 'core/theme/theme_mode_provider.dart';
 
 class AppWidget extends ConsumerWidget {
   const AppWidget({super.key});
@@ -23,10 +24,12 @@ class AppWidget extends ConsumerWidget {
     // Router is provided via Riverpod for testability and easy mocking.
     final router = ref.watch(appRouterProvider);
 
+    final themeMode = ref.watch(themeModeProvider);
+
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
       title: 'DomPet',
-      themeMode: ThemeMode.system,
+      themeMode: themeMode,
       theme: buildLightTheme(),
       darkTheme: buildDarkTheme(),
       routerConfig: router,

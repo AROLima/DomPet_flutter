@@ -22,6 +22,8 @@
 // - UI handles loading/error async states from the provider.
 
 import 'package:flutter/material.dart';
+import 'dart:ui';
+import 'package:palette_generator/palette_generator.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../shared/models/product.dart';
 import '../../cart/cart_service.dart';
@@ -79,30 +81,23 @@ class _DetailState extends ConsumerState<_Detail> {
           elevation: 1,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           clipBehavior: Clip.antiAlias,
-          child: Container(
-            color: Theme.of(context).colorScheme.surface,
-            constraints: const BoxConstraints(maxHeight: 420),
-            child: Center(
-              child: AspectRatio(
-                aspectRatio: isWide ? 1 : 4 / 3,
-                child: p.imagemUrl != null
-                    ? Image.network(
-                        p.imagemUrl!,
-                        fit: BoxFit.contain,
-                        alignment: Alignment.center,
-                        errorBuilder: (context, error, stack) => Container(
-                          color: scheme.surfaceContainerHighest,
+          child: LayoutBuilder(
+            builder: (context, imgConstraints) {
+              return Container(
+                constraints: const BoxConstraints(maxHeight: 420),
+                decoration: const BoxDecoration(color: AppColors.neutralContainer),
+                child: AspectRatio(
+                  aspectRatio: isWide ? 1 : 4 / 3,
+                  child: p.imagemUrl == null
+                      ? Container(
+                          color: scheme.surfaceContainerHighest.withValues(alpha: 0.4),
                           alignment: Alignment.center,
                           child: const Icon(Icons.pets, size: 72),
-                        ),
-                      )
-                    : Container(
-                        color: scheme.surfaceContainerHighest,
-                        alignment: Alignment.center,
-                        child: const Icon(Icons.pets, size: 72),
-                      ),
-              ),
-            ),
+                        )
+                      : _BlurFillNetworkImage(url: p.imagemUrl!),
+                ),
+              );
+            },
           ),
         ),
       );
@@ -245,5 +240,207 @@ class _DetailState extends ConsumerState<_Detail> {
       return content;
     });
   }
+}
+
+// Small reusable widget: loads an image once and paints a blurred, darkened
+// stretched background version behind the sharp foreground to avoid empty bars.
+class _BlurFillNetworkImage extends StatefulWidget {
+  const _BlurFillNetworkImage({required this.url});
+  final String url;
+  @override
+  State<_BlurFillNetworkImage> createState() => _BlurFillNetworkImageState();
+}
+
+class _BlurFillNetworkImageState extends State<_BlurFillNetworkImage> {
+  static final Map<String, PaletteGenerator> _cache = {};
+  PaletteGenerator? _palette;
+  bool _loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _extract();
+  }
+
+  Future<void> _extract() async {
+    if (_cache.containsKey(widget.url)) {
+      _palette = _cache[widget.url];
+      return; // Let build pick it up synchronously
+    }
+    setState(() => _loading = true);
+    try {
+      final pg = await PaletteGenerator.fromImageProvider(
+        NetworkImage(widget.url),
+        size: const Size(80, 80), // small sample for speed
+        maximumColorCount: 12,
+      );
+      _cache[widget.url] = pg;
+      if (mounted) setState(() => _palette = pg);
+    } catch (_) {
+      // ignore errors (keep default)
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final dominant = _palette?.dominantColor?.color;
+    final vibrant = _palette?.vibrantColor?.color;
+    final baseColor = dominant ?? vibrant ?? scheme.secondary.withValues(alpha: 0.5);
+    // Derive lighter & darker variants
+    Color overlayHigh = baseColor.withValues(alpha: 0.28);
+    Color overlayLow = baseColor.withValues(alpha: 0.06);
+    if (Theme.of(context).brightness == Brightness.dark) {
+      overlayHigh = baseColor.withValues(alpha: 0.40);
+      overlayLow = baseColor.withValues(alpha: 0.12);
+    }
+
+    return _HoverScale(
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Positioned.fill(
+            child: Image.network(
+              widget.url,
+              fit: BoxFit.cover,
+              alignment: Alignment.center,
+              color: scheme.surface.withValues(alpha: 0.05),
+              colorBlendMode: BlendMode.srcOver,
+            ),
+          ),
+            Positioned.fill(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+                child: AnimatedContainer(
+                  duration: AppTokens.normal,
+                  curve: Curves.easeOut,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [overlayHigh, overlayLow],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          if (_loading) const Center(child: SizedBox(width: 40, height: 40, child: CircularProgressIndicator(strokeWidth: 2))),
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: _ShimmerNetworkImage(url: widget.url),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// Simple hover scale wrapper (desktop/web). Mobile: no change.
+class _HoverScale extends StatefulWidget {
+  const _HoverScale({required this.child});
+  final Widget child;
+  @override
+  State<_HoverScale> createState() => _HoverScaleState();
+}
+
+class _HoverScaleState extends State<_HoverScale> {
+  bool _hover = false;
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: AnimatedScale(
+        scale: _hover ? 1.015 : 1,
+        duration: AppTokens.normal,
+        curve: Curves.easeOut,
+        child: widget.child,
+      ),
+    );
+  }
+}
+
+// Shimmer while image loads (no extra package): animated gradient sweep.
+class _ShimmerNetworkImage extends StatefulWidget {
+  const _ShimmerNetworkImage({required this.url});
+  final String url;
+  @override
+  State<_ShimmerNetworkImage> createState() => _ShimmerNetworkImageState();
+}
+
+class _ShimmerNetworkImageState extends State<_ShimmerNetworkImage>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1400),
+  )..repeat();
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Image.network(
+      widget.url,
+      fit: BoxFit.contain,
+      frameBuilder: (context, child, frame, wasSync) {
+        if (frame != null) return child; // finished
+        return AnimatedBuilder(
+          animation: _c,
+          builder: (context, _) {
+            return CustomPaint(
+              painter: _ShimmerPainter(progress: _c.value),
+              child: Container(
+                color: Colors.transparent,
+                alignment: Alignment.center,
+                child: const Icon(Icons.pets, size: 56, color: Colors.white54),
+              ),
+            );
+          },
+        );
+      },
+      errorBuilder: (context, error, stack) => Container(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        alignment: Alignment.center,
+        child: const Icon(Icons.pets, size: 72),
+      ),
+    );
+  }
+}
+
+class _ShimmerPainter extends CustomPainter {
+  _ShimmerPainter({required this.progress});
+  final double progress;
+  @override
+  void paint(Canvas canvas, Size size) {
+  final base = Paint()..color = Colors.white.withValues(alpha: 0.08);
+    canvas.drawRect(Offset.zero & size, base);
+    final gradientWidth = size.width * 0.45;
+    final dx = (size.width + gradientWidth) * progress - gradientWidth;
+    final rect = Rect.fromLTWH(dx, 0, gradientWidth, size.height);
+    final gradient = LinearGradient(
+      colors: [
+        Colors.white.withValues(alpha: 0.00),
+        Colors.white.withValues(alpha: 0.25),
+        Colors.white.withValues(alpha: 0.00),
+      ],
+      stops: const [0, 0.5, 1],
+    );
+    final paint = Paint()..shader = gradient.createShader(rect);
+    canvas.drawRect(rect, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _ShimmerPainter old) => old.progress != progress;
 }
 

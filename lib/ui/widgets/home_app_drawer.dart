@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../src/core/auth/session.dart';
+import '../../src/core/theme/theme_mode_provider.dart';
 
 class HomeAppDrawer extends ConsumerWidget {
   const HomeAppDrawer({super.key});
@@ -33,6 +34,16 @@ class HomeAppDrawer extends ConsumerWidget {
               title: const Text('Carrinho'),
               onTap: () => context.push('/cart'),
             ),
+            Consumer(builder: (context, ref, _) {
+              final mode = ref.watch(themeModeProvider);
+              final isDark = mode == ThemeMode.dark;
+              return ListTile(
+                leading: Icon(isDark ? Icons.dark_mode : Icons.light_mode),
+                title: Text(isDark ? 'Modo escuro' : 'Modo claro'),
+                subtitle: const Text('Alternar tema'),
+                onTap: () => ref.read(themeModeProvider.notifier).toggle(),
+              );
+            }),
             if (isAdmin) ...[
               const Divider(),
               Padding(

@@ -41,7 +41,7 @@ const maxContentWidth = 1200.0;
 
 // Colors (Petshop cheerful + accessible palette)
 class AppColors {
-  // Core
+  // Core brand hues
   static const primary = Color(0xFFFF8A00); // laranja “pet”
   static const onPrimary = Color(0xFFFFFFFF);
   static const secondary = Color(0xFF19B4A3); // teal
@@ -49,19 +49,23 @@ class AppColors {
   static const tertiary = Color(0xFF6C5CE7); // lavanda/roxo suave
   static const onTertiary = Color(0xFFFFFFFF);
 
-  // Surfaces
-  static const background = Color(0xFFFFF8EF); // creme
-  static const surface = Color(0xFFFFFFFF);
-  static const onSurface = Color(0xFF1F2937);
-  static const outline = Color(0xFFD1D5DB);
+  // Light surfaces (softened)
+  // Previous background (#FFF8EF) looked very white on high‑brightness displays.
+  // New stack introduces gentle tonal steps for depth without harsh pure white.
+  static const background = Color(0xFFFFF3E0); // warm cream (approx Material amber 50 tuned)
+  static const surfaceLow = Color(0xFFFFF7E9); // slightly lighter card base
+  static const surface = Color(0xFFFFFBF4); // near-top surface (inputs)
+  static const neutralContainer = Color(0xFFF3E9DC); // soft beige for image/thumb backgrounds
+  static const onSurface = Color(0xFF1F262E); // neutral slightly desaturated
+  static const outline = Color(0xFFCBD5E1); // softened gray-blue
 
-  // Semantics
+  // Support / semantic
   static const success = Color(0xFF22C55E);
   static const warning = Color(0xFFF59E0B);
   static const error = Color(0xFFEF4444);
 
-  // Variants
-  static const surfaceVariant = Color(0xFFF0F9FF); // sutil, para placeholders
+  // Variants / subtle backgrounds
+  static const surfaceVariant = Color(0xFFF2F6FA); // light cool for placeholders
 }
 
 // Currency helpers
@@ -122,8 +126,8 @@ ThemeData buildLightTheme() {
     useMaterial3: true,
     colorScheme: scheme,
     brightness: Brightness.light,
-  scaffoldBackgroundColor: scheme.surface,
-  canvasColor: scheme.surface,
+  scaffoldBackgroundColor: AppColors.background,
+  canvasColor: AppColors.background,
     visualDensity: VisualDensity.standard,
   );
 
@@ -139,10 +143,10 @@ ThemeData buildLightTheme() {
   return base.copyWith(
     appBarTheme: base.appBarTheme.copyWith(
       centerTitle: true,
-      backgroundColor: scheme.surface,
+      backgroundColor: AppColors.background,
       foregroundColor: scheme.onSurface,
       elevation: 1,
-      shadowColor: scheme.onSurface.withValues(alpha: 0.06),
+      shadowColor: scheme.onSurface.withValues(alpha: 0.05),
     ),
     textTheme: textTheme,
     elevatedButtonTheme: ElevatedButtonThemeData(
@@ -183,41 +187,41 @@ ThemeData buildLightTheme() {
         }),
       ),
     ),
-    chipTheme: base.chipTheme.copyWith(
-      backgroundColor: AppColors.secondary.withValues(alpha: 0.10),
+  chipTheme: base.chipTheme.copyWith(
+    backgroundColor: AppColors.secondary.withValues(alpha: 0.12),
       selectedColor: AppColors.secondary,
       labelStyle: TextStyle(color: scheme.onSecondary, fontWeight: FontWeight.w700),
       deleteIconColor: scheme.onSecondary,
-      side: BorderSide(color: scheme.outline.withValues(alpha: 0.8)),
+    side: BorderSide(color: scheme.outline.withValues(alpha: 0.6)),
       shape: const StadiumBorder(),
       padding: const EdgeInsets.symmetric(horizontal: AppTokens.s12, vertical: AppTokens.s8),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: scheme.surface,
+    fillColor: AppColors.surfaceLow,
       contentPadding: const EdgeInsets.symmetric(horizontal: AppTokens.s16, vertical: AppTokens.s12),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppTokens.r12), borderSide: BorderSide(color: scheme.outline)),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppTokens.r12), borderSide: BorderSide(color: scheme.outline)),
+    border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppTokens.r12), borderSide: BorderSide(color: AppColors.outline.withValues(alpha: 0.8))),
+    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppTokens.r12), borderSide: BorderSide(color: AppColors.outline.withValues(alpha: 0.6))),
       focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppTokens.r12), borderSide: BorderSide(color: scheme.primary, width: 2)),
-      labelStyle: TextStyle(color: scheme.onSurface.withValues(alpha: 0.8)),
-      hintStyle: TextStyle(color: scheme.onSurface.withValues(alpha: 0.6)),
+    labelStyle: TextStyle(color: scheme.onSurface.withValues(alpha: 0.75)),
+    hintStyle: TextStyle(color: scheme.onSurface.withValues(alpha: 0.55)),
     ),
   cardTheme: CardThemeData(
-      color: scheme.surface,
+    color: AppColors.surfaceLow,
       elevation: AppTokens.e1,
-      shadowColor: scheme.onSurface.withValues(alpha: 0.08),
+    shadowColor: scheme.onSurface.withValues(alpha: 0.05),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTokens.r16)),
       clipBehavior: Clip.antiAlias,
       margin: const EdgeInsets.all(AppTokens.s8),
     ),
     tooltipTheme: TooltipThemeData(
-      decoration: BoxDecoration(color: scheme.onSurface, borderRadius: BorderRadius.circular(8)),
-      textStyle: TextStyle(color: scheme.surface),
+    decoration: BoxDecoration(color: scheme.onSurface.withValues(alpha: 0.92), borderRadius: BorderRadius.circular(8)),
+    textStyle: TextStyle(color: AppColors.surface),
     ),
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
-      backgroundColor: scheme.onSurface,
-      contentTextStyle: TextStyle(color: scheme.surface),
+    backgroundColor: scheme.onSurface.withValues(alpha: 0.90),
+    contentTextStyle: TextStyle(color: AppColors.surface),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     ),
     badgeTheme: BadgeThemeData(
