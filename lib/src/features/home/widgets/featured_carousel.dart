@@ -292,9 +292,10 @@ class _SlideCard extends ConsumerWidget {
             ProductImage(
               url: product.imagemUrl,
               cacheWidth: 1600,
-              cacheHeight: 800,
-              aspectRatio: null, // fills parent
-              padding: const EdgeInsets.all(12),
+              // Remover cacheHeight para não influenciar proporção do decoder
+              aspectRatio: null, // preenche o pai
+              padding: EdgeInsets.zero, // sem bordas aparentes
+              fitMode: BoxFit.cover, // garante cobertura sem distorcer
               borderRadius: BorderRadius.circular(18),
               errorIcon: const Icon(Icons.pets, size: 72),
             )
