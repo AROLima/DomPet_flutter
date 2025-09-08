@@ -94,6 +94,13 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
           },
         ),
         title: const Text('Checkout'),
+        actions: [
+          IconButton(
+            tooltip: 'Início',
+            icon: const Icon(Icons.home),
+            onPressed: () => context.go('/'),
+          ),
+        ],
       ),
       body: Center(
         child: ConstrainedBox(

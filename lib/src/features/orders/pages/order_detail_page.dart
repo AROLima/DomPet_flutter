@@ -18,6 +18,7 @@
 //   separate admin flows.
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../shared/models/order.dart';
 import '../orders_service.dart';
@@ -30,7 +31,21 @@ class OrderDetailPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final idInt = int.parse(id);
     return Scaffold(
-      appBar: AppBar(title: Text('Pedido #$id')),
+      appBar: AppBar(
+        title: Text('Pedido #$id'),
+        leading: IconButton(
+          tooltip: 'Início',
+          icon: const Icon(Icons.home_outlined),
+          onPressed: () => context.go('/'),
+        ),
+        actions: [
+          IconButton(
+            tooltip: 'Início',
+            icon: const Icon(Icons.home),
+            onPressed: () => context.go('/'),
+          ),
+        ],
+      ),
       body: FutureBuilder<Pedido>(
         future: ref.read(ordersServiceProvider).getById(idInt),
         builder: (context, snap) {

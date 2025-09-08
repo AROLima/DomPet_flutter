@@ -61,6 +61,12 @@ class ProfilePage extends ConsumerWidget {
               title: Text(json['nome']?.toString() ?? ''),
               subtitle: Text(json['email']?.toString() ?? ''),
             ),
+            ListTile(
+              leading: const Icon(Icons.receipt_long_outlined),
+              title: const Text('Meus pedidos'),
+              subtitle: const Text('Ver histórico de pedidos'),
+              onTap: () => context.push('/pedidos'),
+            ),
             const SizedBox(height: 8),
             // Theme toggle (agora alterna apenas Claro / Escuro)
             Consumer(builder: (context, ref, _) {
