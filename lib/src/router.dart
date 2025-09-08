@@ -68,7 +68,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/produtos',
         name: 'produtos',
-        builder: (context, state) => const HomePage(),
+        // Keep consistent layout/shell by redirecting to '/'
+        redirect: (context, state) => '/',
+        builder: (context, state) => const HomeShell(),
       ),
       GoRoute(
         path: '/produto/:id',

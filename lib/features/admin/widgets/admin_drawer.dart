@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../src/core/theme/theme_mode_provider.dart';
+import '../../../src/core/auth/session.dart';
 
 class AdminDrawer extends ConsumerWidget {
   const AdminDrawer({super.key});
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+  final isLoggedIn = ref.watch(sessionProvider).value != null;
   // Usa sempre o Theme para padronizar a cor do Drawer
   // Usa a mesma cor do corpo do Card (AppColors.surface) no tema claro
   return Drawer(
@@ -47,6 +49,28 @@ class AdminDrawer extends ConsumerWidget {
                 onTap: () => ref.read(themeModeProvider.notifier).toggle(),
               );
             }),
+            if (isLoggedIn)
+              ListTile(
+                leading: const Icon(Icons.logout),
+                title: const Text('Sair da conta'),
+                onTap: () async {
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: const Text('Sair?'),
+                      content: const Text('Você tem certeza que deseja sair?'),
+                      actions: [
+                        TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancelar')),
+                        FilledButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Sair')),
+                      ],
+                    ),
+                  );
+                  if (confirmed == true) {
+                    await ref.read(sessionProvider.notifier).clear();
+                    if (context.mounted) context.go('/');
+                  }
+                },
+              ),
             ListTile(
               leading: const Icon(Icons.edit),
               title: const Text('Editar produto...'),

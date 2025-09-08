@@ -95,17 +95,36 @@ class Pedido {
   final double total;
   final DateTime createdAt;
 
-  factory Pedido.fromJson(Map<String, dynamic> json) => Pedido(
-        id: (json['id'] as num).toInt(),
-        status: json['status'] as String,
-        enderecoEntrega: EnderecoDto.fromJson(json['enderecoEntrega'] as Map<String, dynamic>),
-        itens: (json['itens'] as List)
-            .whereType<Map<String, dynamic>>()
-            .map(ItemPedido.fromJson)
-            .toList(),
-        total: (json['total'] as num).toDouble(),
-        createdAt: DateTime.parse(json['createdAt'] as String),
-      );
+  factory Pedido.fromJson(Map<String, dynamic> json) {
+    DateTime _parseDate(dynamic v) {
+      try {
+        if (v is String) return DateTime.parse(v);
+        if (v is num) {
+          final n = v.toInt();
+          if (n > 1000000000000) {
+            return DateTime.fromMillisecondsSinceEpoch(n, isUtc: true);
+          } else if (n > 1000000000) {
+            return DateTime.fromMillisecondsSinceEpoch(n * 1000, isUtc: true);
+          }
+        }
+      } catch (_) {}
+      return DateTime.now().toUtc();
+    }
+
+    final rawItens = json['itens'];
+    final itensList = (rawItens is List)
+        ? rawItens.whereType<Map<String, dynamic>>().map(ItemPedido.fromJson).toList()
+        : <ItemPedido>[];
+
+    return Pedido(
+      id: (json['id'] as num).toInt(),
+      status: json['status'] as String,
+      enderecoEntrega: EnderecoDto.fromJson(json['enderecoEntrega'] as Map<String, dynamic>),
+      itens: itensList,
+      total: (json['total'] as num).toDouble(),
+      createdAt: _parseDate(json['createdAt']),
+    );
+  }
 
   Map<String, dynamic> toJson() => {
         'id': id,

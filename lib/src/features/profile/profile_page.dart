@@ -38,6 +38,11 @@ class ProfilePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(profileProvider);
+  final isLoggedIn = ref.watch(sessionProvider).value != null;
+  final width = MediaQuery.of(context).size.width;
+  final isNarrow = width < 360;
+  final tilePadding = EdgeInsets.symmetric(horizontal: isNarrow ? 8 : 16);
+  final minLead = isNarrow ? 28.0 : null;
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -54,33 +59,65 @@ class ProfilePage extends ConsumerWidget {
       ),
       body: async.when(
         data: (json) => ListView(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.fromLTRB(isNarrow ? 8 : 16, 12, isNarrow ? 8 : 16, 24),
           children: [
             ListTile(
               leading: const Icon(Icons.person),
               title: Text(json['nome']?.toString() ?? ''),
               subtitle: Text(json['email']?.toString() ?? ''),
+              dense: isNarrow,
+              contentPadding: tilePadding,
+              minLeadingWidth: minLead,
             ),
             ListTile(
               leading: const Icon(Icons.receipt_long_outlined),
               title: const Text('Meus pedidos'),
-              subtitle: const Text('Ver histórico de pedidos'),
+              subtitle: isNarrow ? null : const Text('Ver histórico de pedidos'),
               onTap: () => context.push('/pedidos'),
+              dense: isNarrow,
+              contentPadding: tilePadding,
+              minLeadingWidth: minLead,
             ),
             const SizedBox(height: 8),
             // Theme toggle (agora alterna apenas Claro / Escuro)
             Consumer(builder: (context, ref, _) {
               final mode = ref.watch(themeModeProvider);
               final isDark = mode == ThemeMode.dark;
-              final subtitle = isDark ? 'Modo escuro ativo' : 'Modo claro ativo';
               final icon = isDark ? Icons.dark_mode : Icons.light_mode;
-              return ListTile(
-                leading: Icon(icon),
-                title: const Text('Tema (Light/Dark)'),
-                subtitle: Text(subtitle),
-                trailing: FilledButton.tonal(
-                  onPressed: () => ref.read(themeModeProvider.notifier).toggle(),
-                  child: Text(isDark ? 'Claro' : 'Escuro'),
+              if (isNarrow) {
+                return SwitchListTile.adaptive(
+                  title: const Text('Tema'),
+                  value: isDark,
+                  onChanged: (_) => ref.read(themeModeProvider.notifier).toggle(),
+                  secondary: Icon(icon),
+                  dense: true,
+                  contentPadding: tilePadding,
+                );
+              }
+              return Padding(
+                padding: tilePadding,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Icon(icon),
+                    const SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Tema'),
+                        Text(
+                          isDark ? 'Modo escuro ativo' : 'Modo claro ativo',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(width: 12),
+                    Switch.adaptive(
+                      value: isDark,
+                      onChanged: (_) => ref.read(themeModeProvider.notifier).toggle(),
+                    ),
+                  ],
                 ),
               );
             }),
@@ -90,14 +127,45 @@ class ProfilePage extends ConsumerWidget {
                 leading: const Icon(Icons.badge_outlined),
                 title: const Text('Papel'),
                 subtitle: Text(json['role'].toString()),
+                dense: isNarrow,
+                contentPadding: tilePadding,
+                minLeadingWidth: minLead,
               ),
-            if (json['ativo'] != null)
-              SwitchListTile(
-                title: const Text('Ativo'),
-                value: json['ativo'] == true,
-                onChanged: null,
-              ),
+            // Removed unused 'Ativo' switch
             const SizedBox(height: 16),
+            if (isLoggedIn)
+              ListTile(
+                leading: const Icon(Icons.logout),
+                title: const Text('Sair da conta'),
+                subtitle: isNarrow ? null : const Text('Encerrar sessão neste dispositivo'),
+                textColor: Theme.of(context).colorScheme.error,
+                iconColor: Theme.of(context).colorScheme.error,
+                onTap: () async {
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: const Text('Sair?'),
+                      content: const Text('Você tem certeza que deseja sair?'),
+                      actions: [
+                        TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancelar')),
+                        FilledButton(
+                          onPressed: () => Navigator.of(ctx).pop(true),
+                          child: const Text('Sair'),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (confirmed != true) return;
+                  await ref.read(sessionProvider.notifier).clear();
+                  if (context.mounted) {
+                    context.go('/');
+                  }
+                },
+                dense: isNarrow,
+                contentPadding: tilePadding,
+                minLeadingWidth: minLead,
+              ),
+            const SizedBox(height: 8),
             // Admin shortcuts (visible only for ADMIN roles)
             Consumer(builder: (context, ref, _) {
               final roles = ref.watch(sessionProvider).value?.roles ?? const <String>[];
@@ -106,12 +174,18 @@ class ProfilePage extends ConsumerWidget {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Admin', style: Theme.of(context).textTheme.titleMedium),
+                  Padding(
+                    padding: EdgeInsets.only(left: isNarrow ? 8 : 0, top: 4, bottom: 4),
+                    child: Text('Admin', style: Theme.of(context).textTheme.titleMedium),
+                  ),
                   ListTile(
                     leading: const Icon(Icons.admin_panel_settings),
                     title: const Text('Gerenciar produtos'),
-                    subtitle: const Text('Abrir lista de produtos (editar/excluir)'),
+                    subtitle: isNarrow ? null : const Text('Abrir lista de produtos (editar/excluir)'),
                     onTap: () => context.push('/admin/produtos'),
+                    dense: isNarrow,
+                    contentPadding: tilePadding,
+                    minLeadingWidth: minLead,
                   ),
                 ],
               );
@@ -119,7 +193,30 @@ class ProfilePage extends ConsumerWidget {
           ],
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, st) => Center(child: Text('Erro: $e')),
+        error: (e, st) {
+          // If not logged in or 401, show a slim state inviting login
+          if (!isLoggedIn) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.person_outline, size: 48),
+                    const SizedBox(height: 8),
+                    const Text('Você não está logado.'),
+                    const SizedBox(height: 12),
+                    FilledButton(
+                      onPressed: () => context.go('/'),
+                      child: const Text('Ir para início'),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+          return Center(child: Text('Erro: $e'));
+        },
       ),
     );
   }

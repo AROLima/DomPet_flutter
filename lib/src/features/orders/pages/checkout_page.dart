@@ -1,30 +1,12 @@
-// DIDACTIC: CheckoutPage — checkout orchestration UI
-//
-// Purpose:
-// - Collect shipping/payment choices and call OrdersService to place an order.
-//
-// Contract:
-// - Inputs: cart state, selected address/payment method.
-// - Outputs: order creation request and navigation to order confirmation.
-// - Error modes: handle validation errors and surface friendly messages.
-//
-// Notes:
-// - Keep sensitive payment logic minimal in the client; delegate to secure
-//   payment providers when possible.
-
-// Checkout page UI and form.
-// Contract:
-// - Collects address fields and posts them to `ordersServiceProvider.checkout`.
-// - On success navigates to the order detail page.
-// Edge cases:
-// - Form validations are minimal; rely on server-side validation and
-//   ProblemDetail for user-friendly errors.
-
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../shared/models/order.dart';
 import '../orders_service.dart';
+import '../../cart/cart_service.dart';
+import '../../../shared/models/cart.dart';
 
 class CheckoutPage extends ConsumerStatefulWidget {
   const CheckoutPage({super.key});
@@ -40,8 +22,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
   final _bairro = TextEditingController();
   final _cep = TextEditingController();
   final _cidade = TextEditingController();
-  final _complemento = TextEditingController();
-  bool _loading = false;
+  bool _submitting = false;
 
   @override
   void dispose() {
@@ -50,13 +31,12 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
     _bairro.dispose();
     _cep.dispose();
     _cidade.dispose();
-    _complemento.dispose();
     super.dispose();
   }
 
-  Future<void> _submit() async {
+  Future<void> _finalizar() async {
     if (!_formKey.currentState!.validate()) return;
-    setState(() => _loading = true);
+    setState(() => _submitting = true);
     try {
       final endereco = EnderecoDto(
         rua: _rua.text,
@@ -64,72 +44,265 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
         bairro: _bairro.text,
         cep: _cep.text,
         cidade: _cidade.text,
-        complemento: _complemento.text.isEmpty ? null : _complemento.text,
       );
       final pedido = await ref.read(ordersServiceProvider).checkout(endereco: endereco);
+      // Atualiza o carrinho globalmente após checkout
+      ref.read(cartRefreshTickProvider.notifier).state++;
       if (!mounted) return;
       context.go('/pedidos/${pedido.id}');
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro no checkout: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Falha ao finalizar pedido')));
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) setState(() => _submitting = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(cartRefreshTickProvider); // refetch cart when bumped
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          tooltip: 'Início',
-          icon: const Icon(Icons.home_outlined),
-          onPressed: () {
-            final nav = Navigator.of(context);
-            if (nav.canPop()) {
-              nav.pop();
-            } else {
-              context.go('/');
-            }
-          },
-        ),
-        title: const Text('Checkout'),
-        actions: [
-          IconButton(
-            tooltip: 'Início',
-            icon: const Icon(Icons.home),
-            onPressed: () => context.go('/'),
-          ),
-        ],
-      ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 600),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Form(
-              key: _formKey,
-              child: ListView(
-                children: [
-                  TextFormField(controller: _rua, decoration: const InputDecoration(labelText: 'Rua'), validator: _req),
-                  TextFormField(controller: _numero, decoration: const InputDecoration(labelText: 'Número'), validator: _req),
-                  TextFormField(controller: _bairro, decoration: const InputDecoration(labelText: 'Bairro'), validator: _req),
-                  TextFormField(controller: _cep, decoration: const InputDecoration(labelText: 'CEP'), validator: _req),
-                  TextFormField(controller: _cidade, decoration: const InputDecoration(labelText: 'Cidade'), validator: _req),
-                  TextFormField(controller: _complemento, decoration: const InputDecoration(labelText: 'Complemento (opcional)')),
-                  const SizedBox(height: 16),
-                  FilledButton(
-                    onPressed: _loading ? null : _submit,
-                    child: _loading ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Finalizar pedido'),
-                  ),
-                ],
+      appBar: AppBar(title: const Text('Checkout')),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: ListView(
+          children: [
+            // Resumo do carrinho
+            Card(
+              elevation: 0,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: FutureBuilder<Carrinho>(
+                  future: ref.read(cartControllerProvider).fetchCart(),
+                  builder: (context, snap) {
+                    if (!snap.hasData) {
+                      if (snap.hasError) return const Text('Erro ao carregar carrinho');
+                      return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+                    }
+                    final cart = snap.data!;
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: const [
+                            Icon(Icons.shopping_cart_outlined),
+                            SizedBox(width: 8),
+                            Text('Resumo do carrinho', style: TextStyle(fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        if (cart.itens.isEmpty)
+                          const Text('Seu carrinho está vazio')
+                        else ...[
+                          ...cart.itens.map((i) => Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 4),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(child: Text(i.nome, maxLines: 1, overflow: TextOverflow.ellipsis)),
+                                    const SizedBox(width: 12),
+                                    Text('x${i.quantidade}  R\$ ${i.subtotal.toStringAsFixed(2)}'),
+                                  ],
+                                ),
+                              )),
+                          const Divider(height: 20),
+                          Row(
+                            children: [
+                              const Text('Total', style: TextStyle(fontWeight: FontWeight.w600)),
+                              const Spacer(),
+                              Flexible(
+                                child: Align(
+                                  alignment: Alignment.centerRight,
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Text(
+                                      'R\$ ${cart.total.toStringAsFixed(2)}',
+                                      style: const TextStyle(fontWeight: FontWeight.w600),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
+                    );
+                  },
+                ),
               ),
             ),
-          ),
+
+            const SizedBox(height: 16),
+
+            // Endereço de entrega
+            Card(
+              elevation: 0,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Form(
+                  key: _formKey,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isWide = constraints.maxWidth >= 640;
+                      if (isWide) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: const [
+                                Icon(Icons.local_shipping_outlined),
+                                SizedBox(width: 8),
+                                Text('Endereço de entrega', style: TextStyle(fontWeight: FontWeight.w600)),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            _field(_rua, 'Rua', icon: Icons.home_outlined, action: TextInputAction.next),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _field(
+                                    _numero,
+                                    'Número',
+                                    keyboard: TextInputType.number,
+                                    formatters: [FilteringTextInputFormatter.digitsOnly],
+                                    icon: Icons.confirmation_number_outlined,
+                                    action: TextInputAction.next,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: _field(
+                                    _cep,
+                                    'CEP',
+                                    keyboard: TextInputType.number,
+                                    formatters: [FilteringTextInputFormatter.digitsOnly],
+                                    maxLength: 8,
+                                    icon: Icons.pin_drop_outlined,
+                                    action: TextInputAction.next,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _field(
+                                    _bairro,
+                                    'Bairro',
+                                    icon: Icons.map_outlined,
+                                    action: TextInputAction.next,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: _field(
+                                    _cidade,
+                                    'Cidade',
+                                    icon: Icons.location_city_outlined,
+                                    action: TextInputAction.done,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        );
+                      }
+
+                      // Narrow layout
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: const [
+                              Icon(Icons.local_shipping_outlined),
+                              SizedBox(width: 8),
+                              Text('Endereço de entrega', style: TextStyle(fontWeight: FontWeight.w600)),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          _field(_rua, 'Rua', icon: Icons.home_outlined, action: TextInputAction.next),
+                          _field(
+                            _numero,
+                            'Número',
+                            keyboard: TextInputType.number,
+                            formatters: [FilteringTextInputFormatter.digitsOnly],
+                            icon: Icons.confirmation_number_outlined,
+                            action: TextInputAction.next,
+                          ),
+                          _field(
+                            _cep,
+                            'CEP',
+                            keyboard: TextInputType.number,
+                            formatters: [FilteringTextInputFormatter.digitsOnly],
+                            maxLength: 8,
+                            icon: Icons.pin_drop_outlined,
+                            action: TextInputAction.next,
+                          ),
+                          _field(_bairro, 'Bairro', icon: Icons.map_outlined, action: TextInputAction.next),
+                          _field(_cidade, 'Cidade', icon: Icons.location_city_outlined, action: TextInputAction.done),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // Botão finalizar
+            FutureBuilder<Carrinho>(
+              future: ref.read(cartControllerProvider).fetchCart(),
+              builder: (context, snap) {
+                final total = snap.data?.total;
+                final isEmpty = snap.data?.itens.isEmpty == true;
+                return SafeArea(
+                  top: false,
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: FilledButton.icon(
+                      onPressed: (_submitting || isEmpty == true) ? null : _finalizar,
+                      icon: _submitting
+                          ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                          : const Icon(Icons.check),
+                      label: Text('Finalizar${total != null ? ' — R\$ ${total.toStringAsFixed(2)}' : ''}'),
+                    ),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
         ),
       ),
     );
   }
 
-  String? _req(String? v) => (v == null || v.isEmpty) ? 'Obrigatório' : null;
+  Widget _field(
+    TextEditingController c,
+    String label, {
+    TextInputType? keyboard,
+    List<TextInputFormatter>? formatters,
+    int? maxLength,
+    IconData? icon,
+    TextInputAction action = TextInputAction.next,
+    bool required = true,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: TextFormField(
+        controller: c,
+        textInputAction: action,
+        keyboardType: keyboard,
+        inputFormatters: formatters,
+        maxLength: maxLength,
+        decoration: InputDecoration(
+          labelText: label,
+          counterText: maxLength != null ? '' : null,
+          prefixIcon: icon != null ? Icon(icon) : null,
+        ),
+        validator: required ? (v) => (v == null || v.isEmpty) ? 'Obrigatório' : null : null,
+      ),
+    );
+  }
 }

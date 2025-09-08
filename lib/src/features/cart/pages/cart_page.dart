@@ -108,7 +108,24 @@ class _CartPageState extends ConsumerState<CartPage> {
           }
           final cart = snap.data!;
           if (cart.itens.isEmpty) {
-            return const Center(child: Text('Seu carrinho está vazio'));
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.shopping_cart_outlined, size: 64, color: Theme.of(context).colorScheme.primary),
+                    const SizedBox(height: 12),
+                    const Text('Seu carrinho está vazio'),
+                    const SizedBox(height: 12),
+                    FilledButton(
+                      onPressed: () => context.go('/'),
+                      child: const Text('Ver produtos'),
+                    ),
+                  ],
+                ),
+              ),
+            );
           }
           return RefreshIndicator(
             onRefresh: _reload,
@@ -276,34 +293,90 @@ class _CartPageState extends ConsumerState<CartPage> {
                   });
                 }),
                 const SizedBox(height: 12),
-                LayoutBuilder(builder: (context, c) {
-                  final small = c.maxWidth < 380;
-                  return Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('Total', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
-                      Text(
-                        'R\$ ${cart.total.toStringAsFixed(2)}',
-                        style: (small ? Theme.of(context).textTheme.titleLarge : Theme.of(context).textTheme.headlineSmall)
-                            ?.copyWith(fontWeight: FontWeight.w700),
-                      ),
-                    ],
-                  );
-                }),
-                const SizedBox(height: 12),
-                Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(minWidth: 200, maxWidth: 420),
-                    child: SizedBox(
-                      width: double.infinity,
-                      child: FilledButton(
-                        onPressed: () => context.push('/checkout'),
-                        child: const Text('Ir para checkout'),
+                SafeArea(
+                  top: false,
+                  child: Card(
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(
+                            children: const [
+                              Icon(Icons.receipt_long_outlined),
+                              SizedBox(width: 8),
+                              Text('Resumo'),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          LayoutBuilder(builder: (context, c) {
+                            final small = c.maxWidth < 380;
+                            return Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Total',
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                                ),
+                                FittedBox(
+                                  child: Text(
+                                    'R\$ ${cart.total.toStringAsFixed(2)}',
+                                    style: (small
+                                            ? Theme.of(context).textTheme.titleLarge
+                                            : Theme.of(context).textTheme.headlineSmall)
+                                        ?.copyWith(fontWeight: FontWeight.w700),
+                                  ),
+                                ),
+                              ],
+                            );
+                          }),
+                          const SizedBox(height: 12),
+                          LayoutBuilder(builder: (context, c) {
+                            final narrow = c.maxWidth < 420;
+                            if (narrow) {
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: OutlinedButton(
+                                      onPressed: () => context.go('/'),
+                                      child: const Text('Continuar comprando'),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: FilledButton(
+                                      onPressed: () => context.push('/checkout'),
+                                      child: const Text('Ir para checkout'),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            }
+                            return Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                OutlinedButton(
+                                  onPressed: () => context.go('/'),
+                                  child: const Text('Continuar comprando'),
+                                ),
+                                FilledButton(
+                                  onPressed: () => context.push('/checkout'),
+                                  child: const Text('Ir para checkout'),
+                                ),
+                              ],
+                            );
+                          }),
+                        ],
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 4),
               ],
             ),
           );

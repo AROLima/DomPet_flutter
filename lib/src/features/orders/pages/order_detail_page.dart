@@ -1,21 +1,5 @@
-// DIDACTIC: OrderDetailPage — order inspection UI
-//
-// Purpose:
-// - Render a single order's details: items, totals, status, and tracking info.
-//
-// Contract:
-// - Inputs: order id.
-// - Outputs: display readable order timeline and actions (reorder, contact support).
-//
-// Notes:
-// - Use read-only models and avoid mutating state here; actions that change
-//   orders should call OrdersService.
-
-// Order detail page: read-only view of a placed order.
-// Contract:
-// - Fetches `Pedido` via service and renders delivery info and items.
-// - This page is read-only; any customer support actions should live in
-//   separate admin flows.
+// OrderDetailPage — order inspection UI
+// Shows status, createdAt, address, items and total of a Pedido.
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -29,7 +13,13 @@ class OrderDetailPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final idInt = int.parse(id);
+    final int? idInt = int.tryParse(id);
+    if (idInt == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Pedido')),
+        body: const Center(child: Text('ID inválido')),
+      );
+    }
     return Scaffold(
       appBar: AppBar(
         title: Text('Pedido #$id'),
@@ -38,50 +28,156 @@ class OrderDetailPage extends ConsumerWidget {
           icon: const Icon(Icons.home_outlined),
           onPressed: () => context.go('/'),
         ),
-        actions: [
-          IconButton(
-            tooltip: 'Início',
-            icon: const Icon(Icons.home),
-            onPressed: () => context.go('/'),
-          ),
-        ],
       ),
       body: FutureBuilder<Pedido>(
         future: ref.read(ordersServiceProvider).getById(idInt),
-        builder: (context, snap) {
-          if (!snap.hasData) {
-            if (snap.hasError) return Center(child: Text('Erro: ${snap.error}'));
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
             return const Center(child: CircularProgressIndicator());
           }
-          final p = snap.data!;
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              Text('Status: ${p.status}', style: Theme.of(context).textTheme.titleMedium),
-              Text('Criado em: ${p.createdAt}'),
-              const SizedBox(height: 12),
-              Text('Endereço de entrega', style: Theme.of(context).textTheme.titleMedium),
-              Text('${p.enderecoEntrega.rua}, ${p.enderecoEntrega.numero} - ${p.enderecoEntrega.bairro}'),
-              Text('${p.enderecoEntrega.cidade} - CEP ${p.enderecoEntrega.cep}'),
-              if (p.enderecoEntrega.complemento != null) Text('Compl.: ${p.enderecoEntrega.complemento}'),
-              const Divider(height: 24),
-              Text('Itens', style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 8),
-              ...p.itens.map((it) => ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(it.nome),
-                    subtitle: Text('Qtd: ${it.quantidade} x R\$ ${it.precoUnitario.toStringAsFixed(2)}'),
-                    trailing: Text('R\$ ${it.subtotal.toStringAsFixed(2)}'),
-                  )),
-              const Divider(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          if (snapshot.hasError) {
+            return Center(child: Text('Erro: ${snapshot.error}'));
+          }
+          final p = snapshot.data!;
+          final textTheme = Theme.of(context).textTheme;
+
+          return Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 720),
+              child: ListView(
+                padding: const EdgeInsets.all(16),
                 children: [
-                  Text('Total', style: Theme.of(context).textTheme.titleLarge),
-                  Text('R\$ ${p.total.toStringAsFixed(2)}', style: Theme.of(context).textTheme.titleLarge),
+                  Card(
+                    elevation: 0,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.receipt_long_outlined),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Wrap(
+                                  spacing: 8,
+                                  runSpacing: 4,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  children: [
+                                    Text('Status:', style: textTheme.titleMedium),
+                                    Chip(label: Text(p.status)),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Criado em: ${'${p.createdAt.toLocal()}'.split('.').first}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Card(
+                    elevation: 0,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.local_shipping_outlined),
+                              const SizedBox(width: 8),
+                              Text('Endereço de entrega', style: textTheme.titleMedium),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text('${p.enderecoEntrega.rua}, ${p.enderecoEntrega.numero} - ${p.enderecoEntrega.bairro}', softWrap: true),
+                          Text('${p.enderecoEntrega.cidade} - CEP ${p.enderecoEntrega.cep}', softWrap: true),
+                          if (p.enderecoEntrega.complemento != null && p.enderecoEntrega.complemento!.isNotEmpty)
+                            Text('Compl.: ${p.enderecoEntrega.complemento}'),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Card(
+                    elevation: 0,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.shopping_bag_outlined),
+                              const SizedBox(width: 8),
+                              Text('Itens', style: textTheme.titleMedium),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          ...p.itens.map((it) => Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 6),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(it.nome, maxLines: 2, overflow: TextOverflow.ellipsis),
+                                          const SizedBox(height: 2),
+                                          Text('Qtd: ${it.quantidade} x R\$ ${it.precoUnitario.toStringAsFixed(2)}'),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    ConstrainedBox(
+                                      constraints: const BoxConstraints(minWidth: 80, maxWidth: 120),
+                                      child: Align(
+                                        alignment: Alignment.centerRight,
+                                        child: FittedBox(
+                                          fit: BoxFit.scaleDown,
+                                          child: Text('R\$ ${it.subtotal.toStringAsFixed(2)}', textAlign: TextAlign.right),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Card(
+                    elevation: 0,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          Text('Total', style: textTheme.titleLarge),
+                          const Spacer(),
+                          Flexible(
+                            child: Align(
+                              alignment: Alignment.centerRight,
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text('R\$ ${p.total.toStringAsFixed(2)}', style: textTheme.titleLarge),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
               ),
-            ],
+            ),
           );
         },
       ),
