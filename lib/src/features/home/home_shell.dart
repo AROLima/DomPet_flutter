@@ -105,7 +105,11 @@ class _HomeShellState extends ConsumerState<HomeShell> {
                 controller: _searchCtrl,
                 loading: _loading,
                 suggestions: _suggestions,
-                onSubmit: (q) => context.push('/produtos?q=${Uri.encodeComponent(q)}'),
+                onSubmit: (q) {
+                  FocusScope.of(context).unfocus();
+                  setState(() => _suggestions = []);
+                  context.push('/produtos?q=${Uri.encodeComponent(q)}');
+                },
               ),
               const SizedBox(height: 24),
               if (selectedCat != null)

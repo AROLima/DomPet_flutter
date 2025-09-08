@@ -33,6 +33,7 @@ import '../../cart/local_cart.dart' show MergeConflict;
 import '../products_service.dart';
 import '../../../../ui/widgets/responsive_scaffold.dart';
 import '../../../../ui/design_system.dart';
+import '../../../../ui/widgets/home_app_drawer.dart';
 import '../../home/widgets/featured_carousel.dart';
 import '../../../shared/widgets/product_image.dart';
 
@@ -106,6 +107,7 @@ class _HomePageState extends ConsumerState<HomePage> {
 
     return ResponsiveScaffold(
       title: const Text('DomPet'),
+      drawer: const HomeAppDrawer(),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

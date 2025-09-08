@@ -35,6 +35,21 @@ class OrdersPage extends ConsumerStatefulWidget {
 class _OrdersPageState extends ConsumerState<OrdersPage> {
   int _page = 0;
 
+  String _fmtDate(DateTime dt) {
+    final d = dt.toLocal();
+    String two(int n) => n < 10 ? '0$n' : '$n';
+    return '${two(d.day)}/${two(d.month)}/${d.year} ${two(d.hour)}:${two(d.minute)}';
+  }
+
+  Color _statusColor(BuildContext context, String status) {
+    final s = status.toUpperCase();
+    final scheme = Theme.of(context).colorScheme;
+    if (s.contains('PAGO') || s.contains('APROV')) return Colors.green.shade700;
+    if (s.contains('CANCEL')) return Colors.red.shade700;
+    if (s.contains('ENVIADO') || s.contains('ENTREG')) return Colors.blue.shade700;
+    return scheme.primary; // aguardando/pendente
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -47,7 +62,21 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
             return const Center(child: CircularProgressIndicator());
           }
           final page = snap.data!;
-          if (page.content.isEmpty) return const Center(child: Text('Nenhum pedido'));
+          if (page.content.isEmpty) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    Icon(Icons.receipt_long_outlined, size: 48),
+                    SizedBox(height: 8),
+                    Text('Nenhum pedido'),
+                  ],
+                ),
+              ),
+            );
+          }
           return Column(
             children: [
               Expanded(
@@ -56,32 +85,126 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
                   separatorBuilder: (_, __) => const Divider(height: 1),
                   itemBuilder: (_, i) {
                     final p = page.content[i];
-                    return ListTile(
-                      title: Text('Pedido #${p.id} - ${p.status}'),
-                      subtitle: Text('Total: R\$ ${p.total.toStringAsFixed(2)}'),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () => context.push('/pedidos/${p.id}'),
+                    final color = _statusColor(context, p.status);
+                    return Card(
+                      elevation: 0,
+                      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: () => context.push('/pedidos/${p.id}'),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).colorScheme.secondaryContainer,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(Icons.receipt_long_outlined),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            'Pedido #${p.id}',
+                                            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                        Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.outline),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Wrap(
+                                      spacing: 8,
+                                      runSpacing: 6,
+                                      crossAxisAlignment: WrapCrossAlignment.center,
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: color.withOpacity(0.10),
+                                            borderRadius: BorderRadius.circular(99),
+                                            border: Border.all(color: color.withOpacity(0.4)),
+                                          ),
+                                          child: Text(
+                                            p.status.replaceAll('_', ' '),
+                                            style: TextStyle(color: color, fontWeight: FontWeight.w700),
+                                          ),
+                                        ),
+                                        Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            const Icon(Icons.schedule, size: 16),
+                                            const SizedBox(width: 4),
+                                            Text(_fmtDate(p.createdAt), style: Theme.of(context).textTheme.bodySmall),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    LayoutBuilder(builder: (context, c) {
+                                      final narrow = c.maxWidth < 360;
+                                      final total = 'R\$ ${p.total.toStringAsFixed(2)}';
+                                      if (narrow) {
+                                        return Text('Total: $total', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700));
+                                      }
+                                      return Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text('Total', style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+                                          FittedBox(
+                                            child: Text(total, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+                                          ),
+                                        ],
+                                      );
+                                    }),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     );
                   },
                 ),
               ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Página ${page.number + 1} de ${page.totalPages}'),
-                  Row(
+              SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      IconButton(
-                        onPressed: _page > 0 ? () => setState(() => _page -= 1) : null,
-                        icon: const Icon(Icons.chevron_left),
-                      ),
-                      IconButton(
-                        onPressed: (page.number + 1) < page.totalPages ? () => setState(() => _page += 1) : null,
-                        icon: const Icon(Icons.chevron_right),
+                      Text('Página ${page.number + 1} de ${page.totalPages}'),
+                      Row(
+                        children: [
+                          IconButton(
+                            tooltip: 'Anterior',
+                            onPressed: _page > 0 ? () => setState(() => _page -= 1) : null,
+                            icon: const Icon(Icons.chevron_left),
+                          ),
+                          IconButton(
+                            tooltip: 'Próxima',
+                            onPressed: (page.number + 1) < page.totalPages ? () => setState(() => _page += 1) : null,
+                            icon: const Icon(Icons.chevron_right),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
+                ),
               ),
             ],
           );
