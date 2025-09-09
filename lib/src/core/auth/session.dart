@@ -6,6 +6,7 @@ import 'dart:convert';
 // import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:riverpod/riverpod.dart';
+import '../http/api_client.dart'; // added for dioProvider in refresh
 
 class Session {
   Session({required this.token, required this.expiresAt});
