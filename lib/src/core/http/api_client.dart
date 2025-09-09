@@ -72,6 +72,7 @@ class _AuthInterceptor extends Interceptor {
   final Ref ref;
   bool _refreshing = false;
   final _queue = <Completer<void>>[];
+  bool _refreshFailedDefinitive = false; // evita loops após 401 fora da janela
 
   Future<void> _enqueueWhileRefreshing() async {
     final c = Completer<void>();
@@ -92,9 +93,15 @@ class _AuthInterceptor extends Interceptor {
 
     final isLogin = options.path.startsWith('/auth/login');
     final isRegister = options.path.startsWith('/auth/register');
+    final isRefresh = options.path.startsWith('/auth/refresh');
+
+    // Se já marcamos falha definitiva de refresh, não tente mais nada (deixa seguir sem auth)
+    if (_refreshFailedDefinitive && !isLogin && !isRegister && !isRefresh) {
+      handler.next(options);
+      return;
+    }
 
     if (session != null) {
-      final isRefresh = options.path.startsWith('/auth/refresh');
       if (!isRefresh && session.isExpiringWithin(const Duration(minutes: 2))) {
         await _tryRefreshToken();
       }
@@ -114,12 +121,14 @@ class _AuthInterceptor extends Interceptor {
     final response = err.response;
     if (response?.statusCode == 401) {
       final retried = err.requestOptions.extra['retried'] == true;
+      final isRefreshCall = err.requestOptions.path.startsWith('/auth/refresh');
       try {
-        if (!retried) {
+        if (!_refreshFailedDefinitive && !retried) {
           await _tryRefreshToken();
           final token = ref.read(sessionProvider).value?.token;
           if (token == null) {
             await ref.read(sessionProvider.notifier).clear();
+            _refreshFailedDefinitive = true; // garante que não repetiremos
             return handler.next(err);
           }
           final clone = await _retryRequest(err.requestOptions, token);
@@ -127,6 +136,10 @@ class _AuthInterceptor extends Interceptor {
         }
       } catch (_) {
         await ref.read(sessionProvider.notifier).clear();
+        // Se a chamada que falhou foi o próprio refresh ou já não há token após tentativa => marca como definitivo
+        if (isRefreshCall || ref.read(sessionProvider).value == null) {
+          _refreshFailedDefinitive = true;
+        }
       }
     }
     handler.next(err);
@@ -160,6 +173,7 @@ class _AuthInterceptor extends Interceptor {
   }
 
   Future<void> _tryRefreshToken() async {
+  if (_refreshFailedDefinitive) return; // não tenta mais
     if (_refreshing) {
       await _enqueueWhileRefreshing();
       return;
