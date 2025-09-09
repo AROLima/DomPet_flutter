@@ -20,6 +20,7 @@ import '../../core/auth/session.dart';
 import '../../shared/models/auth_response.dart';
 import '../cart/local_cart.dart';
 import '../cart/cart_service.dart';
+import '../profile/profile_page.dart'; // for profileProvider invalidation
 
 // Small authentication service used by UI screens.
 //
