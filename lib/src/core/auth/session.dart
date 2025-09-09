@@ -65,6 +65,7 @@ class Session {
 class SessionNotifier extends AsyncNotifier<Session?> {
   static const _key = 'session_v1';
   Timer? _refreshTimer;
+  bool _refreshing = false; // evita refresh concorrente
 
   @override
   Future<Session?> build() async {
@@ -84,15 +85,15 @@ class SessionNotifier extends AsyncNotifier<Session?> {
   }
 
   Future<void> setSession(String token, Duration expiresIn) async {
-  // Clear any previous session artifacts before storing new token
-  final storage = ref.read(storageProvider);
-  await storage.delete(key: '${_key}_token');
-  await storage.delete(key: '${_key}_expiresAt');
-  final s = Session(token: token, expiresAt: DateTime.now().add(expiresIn));
-  state = AsyncData(s);
-  await storage.write(key: '${_key}_token', value: s.token);
-  await storage.write(key: '${_key}_expiresAt', value: s.expiresAt.toIso8601String());
-  _scheduleProactiveRefresh(s);
+    // Clear any previous session artifacts before storing new token
+    final storage = ref.read(storageProvider);
+    await storage.delete(key: '${_key}_token');
+    await storage.delete(key: '${_key}_expiresAt');
+    final s = Session(token: token, expiresAt: DateTime.now().add(expiresIn));
+    state = AsyncData(s);
+    await storage.write(key: '${_key}_token', value: s.token);
+    await storage.write(key: '${_key}_expiresAt', value: s.expiresAt.toIso8601String());
+    _scheduleProactiveRefresh(s);
   }
 
   Future<void> clear() async {
@@ -112,9 +113,43 @@ class SessionNotifier extends AsyncNotifier<Session?> {
   }
 
   Future<void> _tryRefreshToken() async {
-    // Placeholder: actual network refresh is handled by the HTTP layer.
+    // Se já refreshando ou sessão ausente, aborta
+    if (_refreshing) return;
+    final current = state.value;
+    if (current == null) return;
+    // Se já expirou mesmo (passou), deixa interceptador HTTP lidar (limpa sessão)
+    if (current.isExpired) return;
+    // Evita refresh muito cedo (>5 min antes)
+    final remaining = current.expiresAt.difference(DateTime.now());
+    if (remaining > const Duration(minutes: 5)) return;
+
+    _refreshing = true;
+    try {
+      // Reaproveita Dio sem criar dependência cíclica via provider lookup tardio
+      final dio = ref.read(_dioForSessionRefreshProvider);
+      final res = await dio.post('/auth/refresh');
+      if (res.data is Map) {
+        final data = res.data as Map;
+        final token = data['token'] as String?;
+        final expiresIn = data['expiresIn'];
+        if (token != null && expiresIn is num) {
+          await setSession(token, Duration(milliseconds: expiresIn.toInt()));
+        }
+      }
+    } catch (_) {
+      // Silencioso: interceptador HTTP já fará fallback se necessário
+    } finally {
+      _refreshing = false;
+    }
   }
 }
+
+// Provider interno para obter Dio tarde (evita import cruzado aqui)
+final _dioForSessionRefreshProvider = Provider((ref) {
+  // Usa o dio principal (já configurado com interceptors). Ao chamar /auth/refresh
+  // o interceptor de Auth lida com fila de 401 e reutiliza a window de graça.
+  return ref.read(dioProvider);
+});
 
 final storageProvider = Provider((ref) => const FlutterSecureStorage());
 final sessionProvider = AsyncNotifierProvider<SessionNotifier, Session?>(SessionNotifier.new);

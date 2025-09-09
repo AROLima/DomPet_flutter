@@ -37,7 +37,7 @@ final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
 final appRouterProvider = Provider<GoRouter>((ref) {
 
-  return GoRouter(
+  final router = GoRouter(
     navigatorKey: _rootNavigatorKey,
     initialLocation: '/splash',
   // The router listens to this notifier so it can re-evaluate redirects
@@ -183,6 +183,22 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       return null;
     },
   );
+
+  // Listener adicional: se sessão cair para null estando em rota protegida, força login
+  ref.listen(sessionProvider, (prev, next) {
+    final was = prev?.value;
+    final now = next?.value;
+    if (was != null && now == null) {
+      final currentLoc = router.routerDelegate.currentConfiguration.uri.toString();
+      final isPublic = currentLoc.startsWith('/login') || currentLoc.startsWith('/register') || currentLoc.startsWith('/produtos') || currentLoc == '/' || currentLoc.startsWith('/produto/');
+      if (!isPublic) {
+        // Evita empilhar múltiplos redirects se já está indo ao login
+        router.go('/login');
+      }
+    }
+  });
+
+  return router;
 });
 
 final _routerRefreshProvider = Provider<ChangeNotifier>((ref) {
