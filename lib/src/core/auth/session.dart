@@ -84,12 +84,15 @@ class SessionNotifier extends AsyncNotifier<Session?> {
   }
 
   Future<void> setSession(String token, Duration expiresIn) async {
-    final s = Session(token: token, expiresAt: DateTime.now().add(expiresIn));
-    state = AsyncData(s);
-    final storage = ref.read(storageProvider);
-    await storage.write(key: '${_key}_token', value: s.token);
-    await storage.write(key: '${_key}_expiresAt', value: s.expiresAt.toIso8601String());
-    _scheduleProactiveRefresh(s);
+  // Clear any previous session artifacts before storing new token
+  final storage = ref.read(storageProvider);
+  await storage.delete(key: '${_key}_token');
+  await storage.delete(key: '${_key}_expiresAt');
+  final s = Session(token: token, expiresAt: DateTime.now().add(expiresIn));
+  state = AsyncData(s);
+  await storage.write(key: '${_key}_token', value: s.token);
+  await storage.write(key: '${_key}_expiresAt', value: s.expiresAt.toIso8601String());
+  _scheduleProactiveRefresh(s);
   }
 
   Future<void> clear() async {

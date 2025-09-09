@@ -45,6 +45,8 @@ class AuthService {
     final auth = AuthResponse.fromJson(res.data as Map<String, dynamic>);
     // Store session and proactively merge local cart into the server-side cart
     await ref.read(sessionProvider.notifier).setSession(auth.token, Duration(milliseconds: auth.expiresIn));
+  // Invalidate profile so UI fetches fresh /usuarios/me for the new session
+  ref.invalidate(profileProvider);
     await _mergeLocalCart();
   }
 
@@ -55,6 +57,7 @@ class AuthService {
     });
     final auth = AuthResponse.fromJson(res.data as Map<String, dynamic>);
     await ref.read(sessionProvider.notifier).setSession(auth.token, Duration(milliseconds: auth.expiresIn));
+  ref.invalidate(profileProvider);
     await _mergeLocalCart();
   }
 
