@@ -22,12 +22,29 @@ class ResponsiveScaffold extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return LayoutBuilder(builder: (context, constraints) {
       final width = constraints.maxWidth;
-      final padding = appPaddingFor(width);
+  final padding = appPaddingFor(width);
+  final logoSize = width >= AppBreakpoints.md ? 32.0 : 24.0;
 
   final isMD = width >= AppBreakpoints.md;
       return Scaffold(
         appBar: AppBar(
-          title: title ?? const Text('DomPet'),
+          // Don't override leading so the default hamburger shows on small screens
+          // Place a small logo inside the title instead
+    title: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Image.asset(
+                  'web/icons/favicon.png',
+      width: logoSize,
+      height: logoSize,
+                  errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
+                ),
+              ),
+              Flexible(child: title ?? const Text('DomPet')),
+            ],
+          ),
           actions: [
             IconButton(
               tooltip: 'Perfil',
