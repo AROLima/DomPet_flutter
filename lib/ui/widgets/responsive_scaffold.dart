@@ -36,10 +36,10 @@ class ResponsiveScaffold extends ConsumerWidget {
               Padding(
                 padding: const EdgeInsets.only(right: 8),
                 child: Image.asset(
-                  'web/icons/favicon.png',
-      width: logoSize,
-      height: logoSize,
-                  errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
+                  'web/icons/Icon-192.png',
+                  width: logoSize,
+                  height: logoSize,
+                  errorBuilder: (context, error, stackTrace) => Icon(Icons.pets, size: logoSize),
                 ),
               ),
               Flexible(child: title ?? const Text('DomPet')),
