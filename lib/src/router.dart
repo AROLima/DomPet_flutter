@@ -130,7 +130,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const AdminProdutosPage(),
         redirect: (context, state) {
           final session = ref.read(sessionProvider).value;
-          final roles = session?.roles ?? const <String>[];
+          final roles = session == null ? const <String>[] : session.roles;
           if (session == null) return '/login';
           if (!(roles.contains('ADMIN') || roles.contains('ROLE_ADMIN'))) return '/?denied=1';
           return null;
@@ -142,7 +142,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const AdminProdutoFormPage(),
         redirect: (context, state) {
           final session = ref.read(sessionProvider).value;
-          final roles = session?.roles ?? const <String>[];
+          final roles = session == null ? const <String>[] : session.roles;
           if (session == null) return '/login';
           if (!(roles.contains('ADMIN') || roles.contains('ROLE_ADMIN'))) return '/?denied=1';
           return null;
@@ -154,7 +154,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => AdminProdutoFormPage(editarId: int.tryParse(state.pathParameters['id'] ?? '')), 
         redirect: (context, state) {
           final session = ref.read(sessionProvider).value;
-          final roles = session?.roles ?? const <String>[];
+          final roles = session == null ? const <String>[] : session.roles;
           if (session == null) return '/login';
           if (!(roles.contains('ADMIN') || roles.contains('ROLE_ADMIN'))) return '/?denied=1';
           return null;
@@ -166,7 +166,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => AdminProdutoDeletePage(id: int.tryParse(state.pathParameters['id'] ?? '') ?? 0),
         redirect: (context, state) {
           final session = ref.read(sessionProvider).value;
-          final roles = session?.roles ?? const <String>[];
+          final roles = session == null ? const <String>[] : session.roles;
           if (session == null) return '/login';
           if (!(roles.contains('ADMIN') || roles.contains('ROLE_ADMIN'))) return '/?denied=1';
           return null;
@@ -178,7 +178,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       if (isSplash) return null;
       final session = ref.read(sessionProvider).value;
       final loc = state.matchedLocation;
-      bool protected = loc.startsWith('/checkout') || loc.startsWith('/pedidos');
+      final bool protected = loc.startsWith('/checkout') || loc.startsWith('/pedidos');
       if (protected && session == null) return '/login';
       return null;
     },
@@ -186,8 +186,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
   // Listener adicional: se sessão cair para null estando em rota protegida, força login
   ref.listen(sessionProvider, (prev, next) {
-    final was = prev?.value;
-    final now = next?.value;
+    final was = prev?.value; // prev pode ser null na primeira chamada
+    final now = next.value;
     if (was != null && now == null) {
       final currentLoc = router.routerDelegate.currentConfiguration.uri.toString();
       final isPublic = currentLoc.startsWith('/login') || currentLoc.startsWith('/register') || currentLoc.startsWith('/produtos') || currentLoc == '/' || currentLoc.startsWith('/produto/');

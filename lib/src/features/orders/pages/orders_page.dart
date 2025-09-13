@@ -35,13 +35,13 @@ class OrdersPage extends ConsumerStatefulWidget {
 class _OrdersPageState extends ConsumerState<OrdersPage> {
   int _page = 0;
 
-  String _fmtDate(DateTime dt) {
+  String formatDate(DateTime dt) {
     final d = dt.toLocal();
     String two(int n) => n < 10 ? '0$n' : '$n';
     return '${two(d.day)}/${two(d.month)}/${d.year} ${two(d.hour)}:${two(d.minute)}';
   }
 
-  Color _statusColor(BuildContext context, String status) {
+  Color statusColor(BuildContext context, String status) {
     final s = status.toUpperCase();
     final scheme = Theme.of(context).colorScheme;
     if (s.contains('PAGO') || s.contains('APROV')) return Colors.green.shade700;
@@ -85,7 +85,7 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
                   separatorBuilder: (_, __) => const Divider(height: 1),
                   itemBuilder: (_, i) {
                     final p = page.content[i];
-                    final color = _statusColor(context, p.status);
+                    final color = statusColor(context, p.status);
                     return Card(
                       elevation: 0,
                       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -133,9 +133,9 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
                                         Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                           decoration: BoxDecoration(
-                                            color: color.withOpacity(0.10),
+                                            color: color.withValues(alpha: 0.10),
                                             borderRadius: BorderRadius.circular(99),
-                                            border: Border.all(color: color.withOpacity(0.4)),
+                                            border: Border.all(color: color.withValues(alpha: 0.4)),
                                           ),
                                           child: Text(
                                             p.status.replaceAll('_', ' '),
@@ -147,7 +147,7 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
                                           children: [
                                             const Icon(Icons.schedule, size: 16),
                                             const SizedBox(width: 4),
-                                            Text(_fmtDate(p.createdAt), style: Theme.of(context).textTheme.bodySmall),
+                                            Text(formatDate(p.createdAt), style: Theme.of(context).textTheme.bodySmall),
                                           ],
                                         ),
                                       ],

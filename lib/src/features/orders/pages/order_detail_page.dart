@@ -41,13 +41,13 @@ class OrderDetailPage extends ConsumerWidget {
           final p = snapshot.data!;
           final textTheme = Theme.of(context).textTheme;
 
-          String _fmtDate(DateTime dt) {
+          String formatDate(DateTime dt) {
             final d = dt.toLocal();
             String two(int n) => n < 10 ? '0$n' : '$n';
             return '${two(d.day)}/${two(d.month)}/${d.year} ${two(d.hour)}:${two(d.minute)}';
           }
 
-          Color _statusColor(String status) {
+          Color statusColor(String status) {
             final s = status.toUpperCase();
             if (s.contains('PAGO') || s.contains('APROV')) return Colors.green.shade700;
             if (s.contains('CANCEL')) return Colors.red.shade700;
@@ -85,7 +85,7 @@ class OrderDetailPage extends ConsumerWidget {
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                       decoration: BoxDecoration(
-                                        color: _statusColor(p.status),
+                                        color: statusColor(p.status),
                                         borderRadius: BorderRadius.circular(99),
                                       ),
                                       child: Text(
@@ -100,7 +100,7 @@ class OrderDetailPage extends ConsumerWidget {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Criado em: ${_fmtDate(p.createdAt)}',
+                            'Criado em: ${formatDate(p.createdAt)}',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),

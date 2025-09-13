@@ -96,7 +96,7 @@ class Pedido {
   final DateTime createdAt;
 
   factory Pedido.fromJson(Map<String, dynamic> json) {
-    DateTime _parseDate(dynamic v) {
+  DateTime parseDate(dynamic v) {
       try {
         if (v is String) return DateTime.parse(v);
         if (v is num) {
@@ -122,7 +122,7 @@ class Pedido {
       enderecoEntrega: EnderecoDto.fromJson(json['enderecoEntrega'] as Map<String, dynamic>),
       itens: itensList,
       total: (json['total'] as num).toDouble(),
-      createdAt: _parseDate(json['createdAt']),
+  createdAt: parseDate(json['createdAt']),
     );
   }
 
